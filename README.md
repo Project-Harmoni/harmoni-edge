@@ -12,10 +12,10 @@ root and center of the Edge functions.
 
 ## Quick-Start Resources
 
-Supabase - https://supabase.com/
-Edge functions - https://supabase.com/edge-functions
-TypeScript - https://www.typescriptlang.org/
-Testing - https://supabase.com/docs/guides/cli/testing-and-linting
+- Supabase - https://supabase.com/
+- Edge functions - https://supabase.com/edge-functions
+- TypeScript - https://www.typescriptlang.org/
+- Testing - https://supabase.com/docs/guides/cli/testing-and-linting
     (note: see the Test Helpers section and blog posts)
 
 ## Repository Structure
