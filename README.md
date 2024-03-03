@@ -54,11 +54,12 @@ The seed.sql file can instantiate data in those tables locally,
 which is useful for running tests.
 
 Once the dev environment is spun up, the CLI will list several URLs:
-         API URL: http://127.0.0.1:54321
-     GraphQL URL: http://127.0.0.1:54321/graphql/v1
-          DB URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-      Studio URL: http://127.0.0.1:54323
-    Inbucket URL: http://127.0.0.1:54324
+
+- API URL: http://127.0.0.1:54321
+- GraphQL URL: http://127.0.0.1:54321/graphql/v1
+- DB URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+- Studio URL: http://127.0.0.1:54323
+- Inbucket URL: http://127.0.0.1:54324
 
 Along with some secrets and tokens.
 
