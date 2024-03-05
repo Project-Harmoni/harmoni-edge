@@ -1,14 +1,13 @@
---this is just a filler table for now
+-- SQL query to songs table (might need more columns)
 create table
 songs(
-    id bigint primary key generated always as identity,
+    song_id bigint primary key generated always as identity,
     album_name text,
     artist_name text,
-    artist_id bigint,
     cover_image_path text,
-    created_at timestamptz default now(),
     is_explicit boolean default false,
     song_file_path text,
     song_name text,
-    stream_count bigint default 0
+    stream_count bigint default 0,
+    created_at timestamptz default now()
 );
