@@ -4,16 +4,13 @@ create table
 artists (
 	artist_id bigint primary key generated always as identity,
 	artist_name text,
-	email text,
 	formation_date date,
 	disbandment_date date,
 	image_path text, -- store the image of the band
 	social_media_link text, -- display their social on the page
 	biography text,
-	genre text,
+	genre text, -- just a field for the artist to descrive their music
 	tokens bigint,
 	created_at timestamptz default now()
 );
 
-alter table songs
-	add column artist_id bigint references artists;

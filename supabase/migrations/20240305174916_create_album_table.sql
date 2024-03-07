@@ -7,7 +7,7 @@ albums (
 	album_name text,
 	artist_id bigint references artists,
 	cover_path text,
-	genre text, -- maybe should be referenced to tags??
+	genre text, -- according to discussion maybe linked to tag system later, so should be just a text for artists?
 	year_released Date,
 	total_tracks bigint,
 	record_label text,
