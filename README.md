@@ -64,14 +64,32 @@ Once the dev environment is spun up, the CLI will list several URLs:
 Along with some secrets and tokens.
 
 The Studio URL (http://127.0.0.1:54323) will bring you to the Dashboard
-where you can explore and manually manipulate the data.
+where you can explore and manually manipulate the tables and data.
 
-## Potential Deployment Workflow
-TODO: set up production workflow to non-local db (later?)
-To push local dev-stage changes to the non-local Harmoni project,
+## Online Project Deployment
+An online test environment exists and is accessible at:
+
+https://supabase.com/dashboard/project/jfnwxnzeswkzvsudcgew
+
+The final piece in the URL is the project key.
+
+The suggested workflow is as follows:
+- Create a new migration and check its effects locally
+- Push to the online environment
+- If all looks good, commit to git repo
+
+To push local dev-stage changes to the online project,
 first log in from the terminal via
 
 supabase login
+
+Link the project to the local dev environment:
+
+supabase link --project-ref jfnwxnzeswkzvsudcgew
+
+Note, owners will want to supply the database password,
+but either you should already have it or you should be
+able to reset it.
 
 Then push database migrations to the non-local project via
 
@@ -81,7 +99,12 @@ And deploy edge functions via
 
 supabase functions deploy function-name-here
 
-Note, the push is for migrations and changes and does not include seed data.
-This avoids unintentional changes to production data.
+The push is for migrations (structure and database function changes)
+and does not include seed data.
+This avoids unintentional changes to the online test data.
+
+For further details, see the "Deploy your project" section 
+in the local development guide:
+https://supabase.com/docs/guides/cli/local-development
 
 
