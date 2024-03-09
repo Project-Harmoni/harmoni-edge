@@ -29,7 +29,7 @@ Key components of this repository include:
 - File storage (TODO) - supabase/storage/ (?)
 - Seed data - supabase/seed.sql
 - SQL tables/schemas - supabase/migrations/
-- Tests - supabase/tests/ (TODO: none written yet)
+- Tests - supabase/tests/
 
 
 ## Supabase Development Environment
