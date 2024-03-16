@@ -23,14 +23,15 @@
         }
 
 
-        const alchemyEndpoint = 'https://polygon-mumbai.g.alchemy.com/v2/_TygI_gMRhNaH_swIvCDNK1cNZxuWrOj'
+        const alchemyEndpoint = Deno.env.get('ALCHEMY_URL')
+        console.log("Alchemy URL: ", Deno.env.get('ALCHEMY_URL'))
         const alchemyProvider = new ethers.providers.JsonRpcProvider(alchemyEndpoint)
 
         const privateKey = ethers.utils.randomBytes(32)
         console.log("Private Key: ", ethers.utils.hexlify(privateKey))  // remove in production
 
         const url = new URL(request.url)
-        const wallet = new ethers.Wallet(privateKey, alchemyProvider)
+        const wallet = new ethers.Wallet(privateKey, alchemyProvider) // remove in production
         const address = wallet.address
 
         const supabase = createClient(
