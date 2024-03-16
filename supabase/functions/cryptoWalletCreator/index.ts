@@ -1,15 +1,28 @@
+    /**
+     * Supabase Edge Function: Wallet Creator
+     * This program implements an edge function for Supabase that generates a new Ethereum wallet
+     * using ethers.js and associates it with a user in the database. It ensures that each user
+     * has only one wallet associated with their account. The function is triggered via an HTTP POST request.
+    */
+    
     import { createClient } from 'https://esm.sh/@supabase/supabase-js'
     import { ethers } from 'https://cdn.skypack.dev/ethers@5.6.8';
 
-    
+    /**
+     * Adds a wallet to the user in the database if they don't already have one.
+     * 
+     * @param {Request} request - The incoming HTTP request.
+     * @returns {Promise<Response>} - A response indicating the outcome of the operation.
+     */
     async function addWalletToUserIfNotExist(request) {
-
+        // Only allow POST requests for this operation
         if(request.method !== 'POST'){
             return new Response(JSON.stringify({error: 'Method not allowed'}), {status: 405, headers: {'Content-Type': 'application/json'}})
         }
 
         let body
         try{
+            // Parse the JSON body of the request
             body = await request.json()
         } catch(error){
             console.error('Error parsing request body: ', error)
@@ -17,21 +30,21 @@
         }
 
         const userId = body.userId
-        console.log("UserId = ", userId)
+        console.log("UserId = ", userId)  // remove in production
         if (!userId){
             return new Response(JSON.stringify({error: 'Missing userId'}), {status: 400, headers: {'Content-Type': 'application/json'}})
         }
 
 
         const alchemyEndpoint = Deno.env.get('ALCHEMY_URL')
-        console.log("Alchemy URL: ", Deno.env.get('ALCHEMY_URL'))
+        console.log("Alchemy URL: ", Deno.env.get('ALCHEMY_URL')) // remove in production
         const alchemyProvider = new ethers.providers.JsonRpcProvider(alchemyEndpoint)
 
         const privateKey = ethers.utils.randomBytes(32)
         console.log("Private Key: ", ethers.utils.hexlify(privateKey))  // remove in production
 
         const url = new URL(request.url)
-        const wallet = new ethers.Wallet(privateKey, alchemyProvider) // remove in production
+        const wallet = new ethers.Wallet(privateKey, alchemyProvider) 
         const address = wallet.address
 
         const supabase = createClient(
@@ -58,6 +71,13 @@
         }    
     }
 
+    /**
+     * Fetches user data from the Supabase database.
+     * 
+     * @param supabase - The Supabase client instance.
+     * @param {string} userId - The ID of the user to fetch.
+     * @returns {Promise<any>} - The user data, if found.
+     */
     async function fetchUser(supabase, userId){
         
         const { data: userData, error: fetchError } = await supabase
@@ -75,6 +95,14 @@
         return userData
     }
 
+    /**
+     * Updates the user's keys in the database.
+     * 
+     * @param supabase - The Supabase client instance.
+     * @param {string} userId - The ID of the user whose keys are being updated.
+     * @param {Uint8Array} privateKey - The private key to be stored.
+     * @param {string} address - The public address to be stored.
+     */
     async function updateUserKeys(supabase, userId, privateKey, address) {
 
         const {error: updateError} = await supabase
@@ -90,7 +118,7 @@
         }   
     }
 
-
+    // Starts the Deno server to handle incoming HTTP requests
     Deno.serve(async (request) =>{
 
         return addWalletToUserIfNotExist(request)
