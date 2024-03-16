@@ -1,15 +1,37 @@
     import { createClient } from 'https://esm.sh/@supabase/supabase-js'
-    import {Web3} from 'https://esm.sh/web3'
+    import { ethers } from 'https://cdn.skypack.dev/ethers@5.6.8';
 
-    const web3 = new Web3()
-
+    
     async function addWalletToUserIfNotExist(request) {
 
+        if(request.method !== 'POST'){
+            return new Response(JSON.stringify({error: 'Method not allowed'}), {status: 405, headers: {'Content-Type': 'application/json'}})
+        }
+
+        let body
+        try{
+            body = await request.json()
+        } catch(error){
+            console.error('Error parsing request body: ', error)
+            return new Response(JSON.stringify({error: 'Bad Request'}), {status: 400, headers: {'Content-Type': 'application/json'}})
+        }
+
+        const userId = body.userId
+        console.log("UserId = ", userId)
+        if (!userId){
+            return new Response(JSON.stringify({error: 'Missing userId'}), {status: 400, headers: {'Content-Type': 'application/json'}})
+        }
+
+
+        const alchemyEndpoint = 'https://polygon-mumbai.g.alchemy.com/v2/_TygI_gMRhNaH_swIvCDNK1cNZxuWrOj'
+        const alchemyProvider = new ethers.providers.JsonRpcProvider(alchemyEndpoint)
+
+        const privateKey = ethers.utils.randomBytes(32)
+        console.log("Private Key: ", ethers.utils.hexlify(privateKey))  // remove in production
+
         const url = new URL(request.url)
-        const userId = url.searchParams.get('userId') 
-        const wallet = web3.eth.accounts.create()
-        const privateKey = wallet.privateKey
-        const publicKey = wallet.address
+        const wallet = new ethers.Wallet(privateKey, alchemyProvider)
+        const address = wallet.address
 
         const supabase = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
@@ -24,10 +46,10 @@
                 return new Response(JSON.stringify({error: 'No user found or user already has a wallet'}), {status: 404})
             }
             
-            await updateUserKeys(supabase, userId, privateKey, publicKey)
+            await updateUserKeys(supabase, userId, privateKey, address)
             console.log('User keys updated successfully:')
 
-            return new Response(JSON.stringify({privateKey, publicKey}), {status: 202, headers: {'Content-Type': 'application/json'}})
+            return new Response(JSON.stringify({address}), {status: 202, headers: {'Content-Type': 'application/json'}})
 
         }catch (error){
             console.error('Error:', error)
@@ -52,13 +74,13 @@
         return userData
     }
 
-    async function updateUserKeys(supabase, userId, privateKey, publicKey) {
+    async function updateUserKeys(supabase, userId, privateKey, address) {
 
         const {error: updateError} = await supabase
             .from('users')
             .update({
-                private_key: privateKey,
-                public_key: publicKey
+                private_key: ethers.utils.hexlify(privateKey),
+                public_key: address
             })
             .eq('user_id', userId)
 
@@ -73,6 +95,23 @@
         return addWalletToUserIfNotExist(request)
         
     })
+
+
+    /* To invoke locally:
+
+    1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
+    2. Make an HTTP request:
+
+    curl --request POST 'http://localhost:54321/functions/v1/cryptoWalletCreator' \
+    --header 'Authorization: Bearer '${SUPABASE_ANON_KEY} \
+    --header 'Content-Type: application/json' \
+    --data '{ "userId": "'${USER_ID}'" }'
+
+    (note, you can set SUPABASE_ANON_KEY via 
+    export SUPABASE_ANONK_KEY=(copy-paste appropriate value here)
+    in your terminal window.)
+
+    */
 
 
 
