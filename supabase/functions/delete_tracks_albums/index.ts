@@ -1,23 +1,27 @@
-/* just to query the user id to test edge functions */
-/* can be tested locally as well as remotely on the test */
+/**
+ * A first draft at an edge function to remove tracks and albums
+ */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js'
+
 
 Deno.serve(async (_req) => {
 
   // Parse the URL and query parameters
   const url = new URL(_req.url);
-  // Get the 'columns' query parameter, default to a specific column if not provided
-  const columns = url.searchParams.get('columns') || 'user_id'; // Example default
-
+  //get the song_id column
+  const song_id = url.searchParams.get('song_id'); 
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: _req.headers.get('Authorization')! } } }
     )
-
-    const { data, error } = await supabase.from('users').select(columns)
-
+    console.log("this song id: ",song_id)
+    const { data, error } = await supabase
+    .from('songs')
+    .delete()
+    .eq('song_id', song_id)
+    
     if (error) {
       throw error
     }
@@ -32,12 +36,15 @@ Deno.serve(async (_req) => {
 })
 
 /* Run edge function for test environment query using 
-curl --request GET ${SUPABASE_URL}'/functions/v1/postgresTest?columns=user_id' \
+curl --request GET ${SUPABASE_URL}'/functions/v1/delete_tracks_albums?columns=song_id' \
 --header "Authorization: Bearer ${SUPABASE_ANON_KEY}"
  columns can be any column in songs
 
  to run edge locally:
- curl --request GET 'http://localhost:54321/functions/v1/postgresTest?columns=user_id' \
+ curl --request GET 'http://localhost:54321/functions/v1/delete_tracks_albums?columns=song_id' \
+--header "Authorization: Bearer ${SUPABASE_ANON_KEY}"
+
+ curl --request GET 'http://localhost:54321/functions/v1/delete_tracks_albums?song_id=1' \
 --header "Authorization: Bearer ${SUPABASE_ANON_KEY}"
 */
 

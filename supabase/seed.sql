@@ -53,12 +53,87 @@ BEGIN
         (user_id, 'listener-user','listener@gmail.com',0);
 END $$;
 
+-- create an album
+DO $$
+DECLARE
+    artist_id_fk uuid;
+BEGIN
+    artist_id_fk := ( SELECT artist_id FROM artists WHERE ( artist_name = 'artist-user'));
+    INSERT INTO public.albums (
+        album_name,
+        artist_id,
+        cover_path,
+        genre,
+        year_released,
+        total_tracks,
+        record_label,
+        duration
+        )
+    VALUES (
+        'album_1',
+        artist_id_fk,
+        'link.com/dkjf/',
+        'blabla',
+        '2024-03-03',
+        10,
+        'white label',
+        65
+    );
+END $$;
+
 --TODO: add seed data for songs and other tables using 
 --the artist and listener IDs
-insert into public.songs (album_name,
+DO $$
+DECLARE
+    artist_id_fk uuid;
+    album_id_fk bigint;
+BEGIN
+    artist_id_fk := ( SELECT artist_id FROM artists WHERE ( artist_name = 'artist-user'));
+    album_id_fk := ( SELECT album_id FROM albums WHERE ( artist_id = artist_id_fk AND album_name = 'album_1'));
+    INSERT INTO public.songs (album_id,
+        artist_id,
+        cover_image_path,
+        is_explicit,
+        payout_threshold,
+        payout_percent,
+        song_file_path,
         song_name,
-        stream_count)
-values
-    ('test_album','Silly Song with Kittens',0),
-    ('test_album','A Cappella Ice Cream',0),
-    ('test_album','World Domination Aria',0);
+        stream_count,
+        ordinal)
+    VALUES (
+        album_id_fk,
+        artist_id_fk,
+        'link.com/dkjf/',
+        False,
+        10,
+        0.5,
+        'link/song.mp3',
+        'nice_m4',
+        0,
+        1
+    ),
+    (
+        album_id_fk,
+        artist_id_fk,
+        'link.com/dkjf/',
+        False,
+        10,
+        0.5,
+        'link/song_2.mp3',
+        'nice_m4_2',
+        0,
+        2
+    ),
+    (
+        album_id_fk,
+        artist_id_fk,
+        'link.com/dkjf/',
+        False,
+        10,
+        0.5,
+        'link/song_3.mp3',
+        'nice_m4_3',
+        0,
+        3
+    );
+END $$;
