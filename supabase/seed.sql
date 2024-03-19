@@ -137,3 +137,45 @@ BEGIN
         3
     );
 END $$;
+
+-- We need tag categories, seed them here
+INSERT INTO public.tag_category (category_name)
+    VALUES ('genres'),('instruments'),('moods'),('uncategorized');
+
+DO $$
+DECLARE
+    tag_id_fk bigint;
+    tag_count bigint;
+BEGIN
+-- add tags to songs, exercising the add_song_tag and add_many_song_tags functions
+    tag_id_fk := public.add_song_tag(
+        public.get_song_id('nice_m4'),
+        'funky-genre',
+        public.get_tag_category_id('genres')
+    );
+    tag_id_fk := public.add_song_tag(
+        public.get_song_id('nice_m4_3'),
+        'funky-genre',
+        public.get_tag_category_id('genres')
+    );
+    tag_id_fk := public.add_song_tag(
+        public.get_song_id('nice_m4'), 
+        'happy',
+        public.get_tag_category_id('moods')
+    );
+    tag_id_fk := public.add_song_tag(
+        public.get_song_id('nice_m4_3'), 
+        'somber',
+        public.get_tag_category_id('moods')
+    );
+    tag_count = public.add_many_song_tags(
+        1,
+        ARRAY['voice','piano','violin'],
+        public.get_tag_category_id('instruments')
+    );
+    tag_count = public.add_many_song_tags(
+        2,
+        ARRAY['voice','piano'],
+        public.get_tag_category_id('instruments')
+    );
+END $$;
