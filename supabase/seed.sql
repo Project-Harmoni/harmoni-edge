@@ -78,6 +78,16 @@ BEGIN
         10,
         'white label',
         65
+    ),
+    (
+        'album_2',
+        artist_id_fk,
+        'link.com/dkjf/',
+        'blablafdkjfkds',
+        '2024-04-03',
+        10,
+        'white label',
+        65
     );
 END $$;
 
