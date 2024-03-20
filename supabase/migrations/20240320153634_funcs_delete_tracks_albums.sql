@@ -18,7 +18,7 @@ begin
         then raise exception 'Invalid song id';
     end if;
     -- to do add delete statement for storage file in music bucket
-    -- delete from storage.music ....
+    -- delete from storage.music where bucket_id = 'music' and name = 'blabla';
     delete from songs where song_id = check_id;
     return 1;
 end;
