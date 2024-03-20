@@ -40,7 +40,17 @@
         console.log("Alchemy URL: ", Deno.env.get('ALCHEMY_URL')) // remove in production
         const alchemyProvider = new ethers.providers.JsonRpcProvider(alchemyEndpoint)
 
-        const privateKey = ethers.utils.randomBytes(32)
+        const tokenContractAddress = '0x9C2B9b81e036F9c745Ff3EA129689f655D0a50C5'
+
+        const tokenAbi = ["function balanceOf(address owner) view returns (uint256)", "function transfer(address to, uint value) returns (bool)"]
+
+        // contract instance
+        const tokenContract = new ethers.Contract(tokenContractAddress, tokenAbi, alchemyProvider)
+        const transferWallet = new ethers.Wallet(Deno.env.get('MASTER_KEY'), alchemyProvider)
+        const contractWithSigner = tokenContract.connect(transferWallet)
+
+
+        const privateKey = ethers.utils.randomBytes(32)  // new wallet for user
         console.log("Private Key: ", ethers.utils.hexlify(privateKey))  // remove in production
 
         const url = new URL(request.url)
@@ -59,7 +69,20 @@
                 console.log('No user found or user already has a wallet')
                 return new Response(JSON.stringify({error: 'No user found or user already has a wallet'}), {status: 404})
             }
-            
+
+            const isListener = await isUserListener(supabase, userId)
+                try {
+                    if (isListener){
+                        console.log(`User with ID ${userId} is a listener.`)
+                        // if user is a listener give them 20 bonus token
+                        transferTokens(contractWithSigner ,address, 1)
+                    }  
+                    
+                    
+                } catch (error) {
+                    return new Response(JSON.stringify({error: 'Error adding free tokens'}), {status: 404})
+                }
+           
             await updateUserKeys(supabase, userId, privateKey, address)
             console.log('User keys updated successfully:')
 
@@ -118,12 +141,44 @@
         }   
     }
 
+    async function isUserListener(supabase, userId){
+
+        const {data, error} = await supabase
+            .from('users')
+            .select('user_type')
+            .eq('user_id', userId)
+            .single()
+
+        if (error){
+            throw new Error('Error retrieving user_type')
+        }
+
+        const isListener = data['user_type'] === 'listener'
+
+        return isListener
+    }
+
     // Starts the Deno server to handle incoming HTTP requests
     Deno.serve(async (request) =>{
 
         return addWalletToUserIfNotExist(request)
         
     })
+
+    async function transferTokens(contractWithSigner, toAddress, amount) {
+    
+        const amountInWei = ethers.utils.parseUnits(amount.toString(), 18)
+    
+        try{
+            const transaction = await contractWithSigner.transfer(toAddress, amountInWei)
+    
+            await transaction.wait()
+            console.log(`Tokens transferred: ${amount} to ${toAddress}`)
+    
+        }catch(error) {
+            throw new Error('Transaction failed');      
+        }    
+    }
 
 
     /* To invoke locally:
