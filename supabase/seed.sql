@@ -97,9 +97,11 @@ DO $$
 DECLARE
     artist_id_fk uuid;
     album_id_fk bigint;
+    album_id_fk_2 bigint;
 BEGIN
     artist_id_fk := ( SELECT artist_id FROM artists WHERE ( artist_name = 'artist-user'));
     album_id_fk := ( SELECT album_id FROM albums WHERE ( artist_id = artist_id_fk AND album_name = 'album_1'));
+    album_id_fk_2 := ( SELECT album_id FROM albums WHERE ( artist_id = artist_id_fk AND album_name = 'album_2'));
     INSERT INTO public.songs (album_id,
         artist_id,
         cover_image_path,
@@ -136,6 +138,42 @@ BEGIN
     ),
     (
         album_id_fk,
+        artist_id_fk,
+        'link.com/dkjf/',
+        False,
+        10,
+        0.5,
+        'link/song_3.mp3',
+        'nice_m4_3',
+        0,
+        3
+    ),
+    (
+        album_id_fk_2,
+        artist_id_fk,
+        'link.com/dkjf/',
+        False,
+        10,
+        0.5,
+        'link/song.mp3',
+        'nice_m4',
+        0,
+        1
+    ),
+    (
+        album_id_fk_2,
+        artist_id_fk,
+        'link.com/dkjf/',
+        False,
+        10,
+        0.5,
+        'link/song_2.mp3',
+        'nice_m4_2',
+        0,
+        2
+    ),
+    (
+        album_id_fk_2,
         artist_id_fk,
         'link.com/dkjf/',
         False,

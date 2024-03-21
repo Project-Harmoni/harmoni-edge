@@ -32,7 +32,7 @@ create or replace function public.edit_track_pricing (
     new_payout_threshold int,
     new_payout_percentage int,
     new_is_free boolean
-) returns bigint
+) returns int
 as $$
 declare
     check_id bigint;
@@ -55,6 +55,7 @@ $$ language plpgsql;
 *   - array of id tracks
 *   - new_payout_threshold
 *   - new_payout_percentage
+*   - new_is_free
 *
 * Output:
 *   - return 1 as success
@@ -64,16 +65,90 @@ create or replace function public.bulk_edit_track_pricing (
     new_payout_threshold int,
     new_payout_percentage int,
     new_is_free boolean
-) returns bigint
+) returns int
 as $$
 declare
     track int;
     update_track int;
 begin
+    -- update the pricing accordingly
     foreach track in array tracks_id
     loop
         update_track = public.edit_track_pricing(
             track,
+            new_payout_threshold,
+            new_payout_percentage,
+            new_is_free
+        );
+    end loop;
+    return 1;
+end;
+$$ language plpgsql;
+
+
+-- edit pricing of a single album
+create or replace function public.edit_album_pricing (
+    edit_album_id bigint,
+    new_payout_threshold int,
+    new_payout_percentage int,
+    new_is_free boolean
+) returns int
+as $$
+declare 
+    check_id bigint;
+    track int;
+    edit_track int;
+begin
+    -- first check if the album id exists
+    check_id := ( select album_id from albums where album_id = edit_album_id );
+    if check_id is null 
+        then raise exception 'Invalid album id';
+    end if;
+    for track in select song_id from songs where album_id = edit_album_id
+    loop
+        if track is null
+            then raise exception 'there is no track in this album';
+        end if;
+        edit_track = public.edit_track_pricing ( 
+            track,
+            new_payout_threshold,
+            new_payout_percentage,
+            new_is_free 
+        );
+        end loop;
+    return 1;
+end;
+$$ language plpgsql;
+
+
+/**
+* Function to buld edit albums pricing
+* loop through the array of album id to update
+*
+* Input:
+*   - array of id album
+*   - new_payout_threshold
+*   - new_payout_percentage
+*   - new_is_free
+*
+* Output:
+*   - return 1 as success
+*/
+create or replace function public.bulk_edit_album_pricing (
+    albums_id bigint[],
+    new_payout_threshold int,
+    new_payout_percentage int,
+    new_is_free boolean
+) returns int
+as $$
+declare 
+    album int;
+    edit_album int;
+begin
+    foreach album in array albums_id
+    loop
+        edit_album = public.edit_album_pricing( 
+            album,
             new_payout_threshold,
             new_payout_percentage,
             new_is_free
