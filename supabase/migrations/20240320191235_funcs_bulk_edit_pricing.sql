@@ -26,7 +26,18 @@ end;
 $$ language plpgsql;
 
 
--- edit a single track pricing
+/**
+* Function to edit track pricing of one track
+*
+* Input:
+*   - track_id
+*   - new_payout_threshold
+*   - new_payout_percentage
+*   - new_is_free
+*
+* Output:
+*   - return 1 as success
+*/
 create or replace function public.edit_track_pricing (
     track_id bigint,
     new_payout_threshold int,
@@ -48,7 +59,7 @@ $$ language plpgsql;
 
 
 /**
-* Function to buld edit tracks pricing
+* Function to bulk edit tracks pricing
 * loop through the array of track id to update
 *
 * Input:
@@ -86,7 +97,19 @@ end;
 $$ language plpgsql;
 
 
--- edit pricing of a single album
+/**
+* Function to edit album pricing
+* Calling the edit_track_pricing for each track_id
+*
+* Input:
+*   - album_id
+*   - new_payout_threshold
+*   - new_payout_percentage
+*   - new_is_free
+*
+* Output:
+*   - return 1 as success
+*/
 create or replace function public.edit_album_pricing (
     edit_album_id bigint,
     new_payout_threshold int,
