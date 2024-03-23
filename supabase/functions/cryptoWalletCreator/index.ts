@@ -75,7 +75,9 @@
                     if (isListener){
                         console.log(`User with ID ${userId} is a listener.`)
                         // if user is a listener give them 20 bonus token
-                        transferTokens(contractWithSigner ,address, 1)
+                        await transferTokens(contractWithSigner ,address, 1)
+                        console.log("Transfering Matic...")
+                        await transferMatic(alchemyProvider, transferWallet, address, '.1')
                     }  
                     
                     
@@ -141,8 +143,15 @@
         }   
     }
 
+    /** 
+     * Checks if a given user is a listener in the database.
+     * 
+     * @param supabase - The initialized Supabase client to interact with the database.
+     * @param userId - The ID of the user to check.
+     * @returns A promise that resolves to true if the user is a listener, false otherwise.
+     */
     async function isUserListener(supabase, userId){
-
+        
         const {data, error} = await supabase
             .from('users')
             .select('user_type')
@@ -157,14 +166,15 @@
 
         return isListener
     }
-
-    // Starts the Deno server to handle incoming HTTP requests
-    Deno.serve(async (request) =>{
-
-        return addWalletToUserIfNotExist(request)
-        
-    })
-
+    
+    /** 
+     * Transfers tokens from a contract to a specified address.
+     * 
+     * @param contractWithSigner - The contract instance with a signer attached, allowing for transactions.
+     * @param toAddress - The address to send tokens to.
+     * @param amount - The amount of tokens to transfer.
+     * @returns A promise that resolves when the transaction is sent.
+     */
     async function transferTokens(contractWithSigner, toAddress, amount) {
     
         const amountInWei = ethers.utils.parseUnits(amount.toString(), 18)
@@ -172,13 +182,52 @@
         try{
             const transaction = await contractWithSigner.transfer(toAddress, amountInWei)
     
-            await transaction.wait()
-            console.log(`Tokens transferred: ${amount} to ${toAddress}`)
+            //await transaction.wait()
+            console.log(`Tokens transfer initiated: ${amount} to ${toAddress}`)
     
         }catch(error) {
             throw new Error('Transaction failed');      
         }    
     }
+
+    /** 
+     * Transfers MATIC to a specified recipient address.
+     * 
+     * @param provider - The Ethereum provider to interact with the network.
+     * @param transferWallet - The wallet from which MATIC will be transferred.
+     * @param recipientAddress - The address to receive the MATIC.
+     * @param amount - The amount of MATIC to transfer.
+     * @returns A promise that resolves when the MATIC transfer is initiated.
+     */
+    async function transferMatic(provider, transferWallet, recipientAddress, amount){
+
+        const matic = ethers.utils.parseEther(amount);
+        const gasPrice = await provider.getGasPrice();
+        const increasedGasPrice = gasPrice.mul(200).div(100);
+        
+        try{
+            const transaction = {
+                to: recipientAddress,
+                value: matic,
+                gasPrice: increasedGasPrice
+            }
+
+            const response = await transferWallet.sendTransaction(transaction)
+            //const receipt = await response.wait()
+            console.log(`MATIC transfer initiated`)
+        }catch (error){
+            console.error('MATIC transfer failed', error)
+        }
+
+    }
+
+
+    // Starts the Deno server to handle incoming HTTP requests
+    Deno.serve(async (request) =>{
+
+        return addWalletToUserIfNotExist(request)
+        
+    })
 
 
     /* To invoke locally:
