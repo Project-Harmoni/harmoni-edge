@@ -53,12 +53,177 @@ BEGIN
         (user_id, 'listener-user','listener@gmail.com',0);
 END $$;
 
+-- create an album
+DO $$
+DECLARE
+    artist_id_fk uuid;
+BEGIN
+    artist_id_fk := ( SELECT artist_id FROM artists WHERE ( artist_name = 'artist-user'));
+    INSERT INTO public.albums (
+        album_name,
+        artist_id,
+        cover_path,
+        genre,
+        year_released,
+        total_tracks,
+        record_label,
+        duration
+        )
+    VALUES (
+        'album_1',
+        artist_id_fk,
+        'link.com/dkjf/',
+        'blabla',
+        '2024-03-03',
+        10,
+        'white label',
+        65
+    ),
+    (
+        'album_2',
+        artist_id_fk,
+        'link.com/dkjf/',
+        'blablafdkjfkds',
+        '2024-04-03',
+        10,
+        'white label',
+        65
+    );
+END $$;
+
 --TODO: add seed data for songs and other tables using 
 --the artist and listener IDs
-insert into public.songs (album_name,
+DO $$
+DECLARE
+    artist_id_fk uuid;
+    album_id_fk bigint;
+    album_id_fk_2 bigint;
+BEGIN
+    artist_id_fk := ( SELECT artist_id FROM artists WHERE ( artist_name = 'artist-user'));
+    album_id_fk := ( SELECT album_id FROM albums WHERE ( artist_id = artist_id_fk AND album_name = 'album_1'));
+    album_id_fk_2 := ( SELECT album_id FROM albums WHERE ( artist_id = artist_id_fk AND album_name = 'album_2'));
+    INSERT INTO public.songs (album_id,
+        artist_id,
+        cover_image_path,
+        is_explicit,
+        payout_threshold,
+        payout_percent,
+        song_file_path,
         song_name,
-        stream_count)
-values
-    ('test_album','Silly Song with Kittens',0),
-    ('test_album','A Cappella Ice Cream',0),
-    ('test_album','World Domination Aria',0);
+        stream_count,
+        ordinal)
+    VALUES (
+        album_id_fk,
+        artist_id_fk,
+        'link.com/dkjf/',
+        False,
+        10,
+        0.5,
+        'link/song.mp3',
+        'nice_m4',
+        0,
+        1
+    ),
+    (
+        album_id_fk,
+        artist_id_fk,
+        'link.com/dkjf/',
+        False,
+        10,
+        0.5,
+        'link/song_2.mp3',
+        'nice_m4_2',
+        0,
+        2
+    ),
+    (
+        album_id_fk,
+        artist_id_fk,
+        'link.com/dkjf/',
+        False,
+        10,
+        0.5,
+        'link/song_3.mp3',
+        'nice_m4_3',
+        0,
+        3
+    ),
+    (
+        album_id_fk_2,
+        artist_id_fk,
+        'link.com/dkjf/',
+        False,
+        10,
+        0.5,
+        'link/song.mp3',
+        'nice_m4',
+        0,
+        1
+    ),
+    (
+        album_id_fk_2,
+        artist_id_fk,
+        'link.com/dkjf/',
+        False,
+        10,
+        0.5,
+        'link/song_2.mp3',
+        'nice_m4_2',
+        0,
+        2
+    ),
+    (
+        album_id_fk_2,
+        artist_id_fk,
+        'link.com/dkjf/',
+        False,
+        10,
+        0.5,
+        'link/song_3.mp3',
+        'nice_m4_3',
+        0,
+        3
+    );
+END $$;
+
+-- We need tag categories, seed them here
+INSERT INTO public.tag_category (category_name)
+    VALUES ('genres'),('instruments'),('moods'),('uncategorized');
+
+DO $$
+DECLARE
+    tag_id_fk bigint;
+    tag_count bigint;
+BEGIN
+-- add tags to songs, exercising the add_song_tag and add_many_song_tags functions
+    tag_id_fk := public.add_song_tag(
+        public.get_song_id('nice_m4'),
+        'funky-genre',
+        public.get_tag_category_id('genres')
+    );
+    tag_id_fk := public.add_song_tag(
+        public.get_song_id('nice_m4_3'),
+        'funky-genre',
+        public.get_tag_category_id('genres')
+    );
+    tag_id_fk := public.add_song_tag(
+        public.get_song_id('nice_m4'), 
+        'happy',
+        public.get_tag_category_id('moods')
+    );
+    tag_id_fk := public.add_song_tag(
+        public.get_song_id('nice_m4_3'), 
+        'somber',
+        public.get_tag_category_id('moods')
+    );
+    tag_count = public.add_many_song_tags(
+        1,
+        ARRAY['voice','piano','violin'],
+        public.get_tag_category_id('instruments')
+    );
+    tag_count = public.add_many_song_tags(
+        2,
+        ARRAY['voice','piano'],
+        public.get_tag_category_id('instruments')
+    );
+END $$;
