@@ -6,7 +6,7 @@
     */
     
     import { createClient } from 'https://esm.sh/@supabase/supabase-js'
-    import { ethers } from 'https://cdn.skypack.dev/ethers@5.6.8';
+    import { ethers } from 'https://cdn.skypack.dev/ethers@5.6.8'
 
     /**
      * Adds a wallet to the user in the database if they don't already have one.
@@ -30,14 +30,12 @@
         }
 
         const userId = body.userId
-        console.log("UserId = ", userId)  // remove in production
         if (!userId){
             return new Response(JSON.stringify({error: 'Missing userId'}), {status: 400, headers: {'Content-Type': 'application/json'}})
         }
 
 
         const alchemyEndpoint = Deno.env.get('ALCHEMY_URL')
-        console.log("Alchemy URL: ", Deno.env.get('ALCHEMY_URL')) // remove in production
         const alchemyProvider = new ethers.providers.JsonRpcProvider(alchemyEndpoint)
 
         const tokenContractAddress = '0x9C2B9b81e036F9c745Ff3EA129689f655D0a50C5'
@@ -51,7 +49,6 @@
 
 
         const privateKey = ethers.utils.randomBytes(32)  // new wallet for user
-        console.log("Private Key: ", ethers.utils.hexlify(privateKey))  // remove in production
 
         const url = new URL(request.url)
         const wallet = new ethers.Wallet(privateKey, alchemyProvider) 
@@ -75,12 +72,20 @@
                     if (isListener){
                         console.log(`User with ID ${userId} is a listener.`)
                         // if user is a listener give them 20 bonus token
-                        await transferTokens(contractWithSigner ,address, 1)
+                        await transferTokens(contractWithSigner ,address, 20)
                         console.log("Transfering Matic...")
                         await transferMatic(alchemyProvider, transferWallet, address, '.1')
-                    }  
-                    
-                    
+                        //update bonus tokens in the database
+                        await supabase
+                            const { data: userData, error: error } = await supabase
+                            .from('listeners')
+                            .update({ tokens: 20 })
+                            .eq('listener_id', userId);
+                        if (error) {
+                                console.error('Operational error fetching user:', fetchError);
+                                throw new Error('Error adding tokens due to operational issue');
+                            }
+                    }                        
                 } catch (error) {
                     return new Response(JSON.stringify({error: 'Error adding free tokens'}), {status: 404})
                 }
@@ -184,6 +189,7 @@
     
             //await transaction.wait()
             console.log(`Tokens transfer initiated: ${amount} to ${toAddress}`)
+            //TO DO: add tokens to user as available
     
         }catch(error) {
             throw new Error('Transaction failed');      

@@ -53,6 +53,38 @@ BEGIN
         (user_id, 'listener-user','listener@gmail.com',0);
 END $$;
 
+-- Create a 2nd listener user
+DO $$
+DECLARE 
+    user_id uuid;
+BEGIN
+    user_id := public.create_seed_user('listener2@gmail.com','listenerpassword');
+    INSERT INTO public.users
+        (user_id, user_name, user_type)
+    VALUES
+        (user_id, 'listener-user', 'listener');
+    INSERT INTO public.listeners
+        (listener_id, listener_name, email, tokens)
+    VALUES
+        (user_id, 'listener-user','listener@gmail.com',0);
+END $$;
+
+-- Create a 3rd listener user
+DO $$
+DECLARE 
+    user_id uuid;
+BEGIN
+    user_id := public.create_seed_user('listener3@gmail.com','listenerpassword');
+    INSERT INTO public.users
+        (user_id, user_name, user_type)
+    VALUES
+        (user_id, 'listener-user', 'listener');
+    INSERT INTO public.listeners
+        (listener_id, listener_name, email, tokens)
+    VALUES
+        (user_id, 'listener-user','listener@gmail.com',0);
+END $$;
+
 -- create an album
 DO $$
 DECLARE
