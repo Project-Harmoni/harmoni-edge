@@ -34,9 +34,8 @@ async function payoutAsong(request) {
     try {
         const { data, error } = await supabase
             .from('listener_song_stream')
-            .select('listener_id,counter_streams, listener: listeners!inner(users!inner(public_key))')
-            //.select('listener_id, counter_streams')
-            .eq('song_id', songId);
+            .select('listener_id,counter_streams, listener: listeners!inner(users!inner(public_key))')   
+            .eq('song_id', songId)
 
         if (error) {
             console.error('Supabase error:', error);
@@ -49,11 +48,27 @@ async function payoutAsong(request) {
             { status: 404, headers: { 'Content-Type': 'application/json' } });
         }
         // get artist id for song
-
-
+        const { data: artistData, error: artistError } = await supabase
+            .from('songs')
+            .select('artist: artists!inner(users!inner(public_key))')   
+            .eq('song_id', songId)
+        
+        if (artistError) {
+            console.error('Error fetching artist ID:', artistError);
+            return new Response(JSON.stringify({ error: 'Error fetching artist data' }), 
+            { status: 500, headers: { 'Content-Type': 'application/json' } });
+        }
+        
+        if (!artistData) {
+            return new Response(JSON.stringify({ message: 'No artist found for the specified song ID' }), 
+            { status: 404, headers: { 'Content-Type': 'application/json' } });
+        }
+        
+        const artist = artistData.artist_id
+        console.log("Artist ID: ", artist)
 
         //processListenersData(data)
-        return new Response(JSON.stringify({ data }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ data, artistData }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     } catch (error) {
         console.error('Error in processing:', error);
         return new Response(JSON.stringify({ error: 'Internal Server Error' }), 
