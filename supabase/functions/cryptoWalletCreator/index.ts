@@ -38,7 +38,7 @@
         const alchemyEndpoint = Deno.env.get('ALCHEMY_URL')
         const alchemyProvider = new ethers.providers.JsonRpcProvider(alchemyEndpoint)
 
-        const tokenContractAddress = '0x9C2B9b81e036F9c745Ff3EA129689f655D0a50C5'
+        const tokenContractAddress = Deno.env.get('TOKEN_CONTRACT_ADDRESS')
 
         const tokenAbi = ["function balanceOf(address owner) view returns (uint256)", "function transfer(address to, uint value) returns (bool)"]
 
@@ -72,14 +72,14 @@
                     if (isListener){
                         console.log(`User with ID ${userId} is a listener.`)
                         // if user is a listener give them 20 bonus token
-                        await transferTokens(contractWithSigner ,address, 20)
+                        await transferTokens(contractWithSigner ,address, 25)
                         console.log("Transfering Matic...")
                         await transferMatic(alchemyProvider, transferWallet, address, '.1')
                         //update bonus tokens in the database
                         await supabase
                             const { data: userData, error: error } = await supabase
                             .from('listeners')
-                            .update({ tokens: 20 })
+                            .update({ tokens: 25 })
                             .eq('listener_id', userId);
                         if (error) {
                                 console.error('Operational error fetching user:', fetchError);
@@ -167,7 +167,7 @@
             throw new Error('Error retrieving user_type')
         }
 
-        const isListener = data['user_type'] === 'listener'
+        const isListener = data['user_type'] === 'Listener'
 
         return isListener
     }

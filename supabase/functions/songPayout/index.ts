@@ -34,7 +34,7 @@ async function payoutAsong(request) {
     try {
         const { data, error } = await supabase
             .from('listener_song_stream')
-            .select('listener_id,counter_streams, listener: listeners!inner(users!inner(public_key))')   
+            .select('listener_id, counter_streams, listener: listeners!inner(users!inner(private_key))')   
             .eq('song_id', songId)
 
         if (error) {
@@ -50,7 +50,7 @@ async function payoutAsong(request) {
         // get artist id for song
         const { data: artistData, error: artistError } = await supabase
             .from('songs')
-            .select('artist: artists!inner(users!inner(public_key))')   
+            .select('artist_id, artist: artists!inner(users!inner(public_key))')   
             .eq('song_id', songId)
         
         if (artistError) {
@@ -64,10 +64,8 @@ async function payoutAsong(request) {
             { status: 404, headers: { 'Content-Type': 'application/json' } });
         }
         
-        const artist = artistData.artist_id
-        console.log("Artist ID: ", artist)
+        processListenersData(supabase, songId, data, artistData)
 
-        //processListenersData(data)
         return new Response(JSON.stringify({ data, artistData }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     } catch (error) {
         console.error('Error in processing:', error);
@@ -77,26 +75,92 @@ async function payoutAsong(request) {
 
 }
 
-async function processListenersData(data, artist_address) {
-    for (const record of data) {
-        console.log(`Listener ID: ${record.listener_id}, Count: ${record.counter_streams}`);
-    }
-}
+async function processListenersData(supabase, songId, data, artistData) {
 
-async function getArtistPublicKey(supabase, artistId) {
-    const { data, error } = await supabase
+    // create instances of alchemy provider and token contract
+    const alchemyEndpoint = Deno.env.get('ALCHEMY_URL')
+    const alchemyProvider = new ethers.providers.JsonRpcProvider(alchemyEndpoint)
+    const tokenContractAddress = Deno.env.get('TOKEN_CONTRACT_ADDRESS')
+    const tokenAbi = ["function balanceOf(address owner) view returns (uint256)", "function transfer(address to, uint value) returns (bool)"]
+    const tokenContract = new ethers.Contract(tokenContractAddress, tokenAbi, alchemyProvider)
+
+    const receiverWallet = artistData[0].artist.users.public_key
+
+    for(let i=0; i < data.length; i++){
+        const listener = data[i].listener_id
+        // create sender wallet
+        const privateKey = data[i].listener.users.private_key
+        const transferWallet = new ethers.Wallet(privateKey, alchemyProvider)
+        const contractWithSigner = tokenContract.connect(transferWallet)
+        //send tokens to artist wallet
+        const tokenAmount = data[i].counter_streams
+        console.log(tokenAmount)
+        const amountInWei = ethers.utils.parseUnits(tokenAmount.toString(), 18)
+
+        try {
+            const transaction = await contractWithSigner.transfer(receiverWallet, amountInWei);
+            console.log('Transfer successful', transaction);
+        } catch (transferError) {
+            console.error('Transfer error:', transferError);
+            return;  // Stop execution and handle the error appropriately
+        }
+        //set count_stream to 0
+        const { data: streamData, error: countError } = await supabase
+        .from('listener_song_stream')
+        .update({ counter_streams: 0 })
+        .eq('song_id', songId)
+        .eq('listener_id', listener)
+        if (countError) {
+            console.error('Error resetting counter_streams:', countError);
+        }
+        console.log(`Successfully reset counter_streams: ${listener}`);
+        // get current balance of listener tokens
+        let {data: listenerData, error: listenerError} = await supabase
+        .from('listeners')
+        .select('tokens')
+        .eq('listener_id', listener)
+        .single()
+        if (listenerError) {
+            console.error('Operational error:', error);
+            //throw new Error('Error subtracting tokens due to operational issue');
+        }   
+        const newTokens = listenerData.tokens - tokenAmount
+        // update with new amount
+        const {error: updateError} = await supabase
+        .from('listeners')
+        .update({tokens: newTokens})
+        .eq('listener_id', listener)
+        if (updateError) {
+            console.error('Error updating tokens:', updateError);
+            //throw new Error('Error updating tokens after subtraction');
+        }
+        console.log('Tokens increased successfully for userId:', artistData[0].artist_id);
+        // get current balance of artist tokens
+        let {data: artistsData, error: artistError} = await supabase
         .from('artists')
-        .select('public_key')
-        .eq('artist_id', artistId)
-        .single();
-
-    if (error) {
-        console.error('Error fetching artist public key:', error);
-        return null;
+        .select('tokens')
+        .eq('artist_id', artistData[0].artist_id)
+        .single()
+        if (artistError) {
+            console.error('Operational error:', error);
+            //throw new Error('Error subtracting tokens due to operational issue');
+        }   
+        const artistTokens = artistsData.tokens + tokenAmount
+        // update with new amount
+        const {error: artistUpdateError} = await supabase
+        .from('artists')
+        .update({tokens: artistTokens})
+        .eq('artist_id', artistData[0].artist_id)
+        if (artistUpdateError) {
+            console.error('Error updating tokens:', updateError);
+            //throw new Error('Error updating tokens after subtraction');
+        }
     }
 
-    return data ? data.public_key : null;
+    
 }
+
+
 
 
 // Starts the Deno server to handle incoming HTTP requests
