@@ -127,7 +127,7 @@ begin
     if check_id is null 
         then raise exception 'Invalid album id';
     end if;
-    for track in select song_id from song_album where album_id = edit_album_id
+    for track in select song_id from songs where album_id = edit_album_id
     loop
         if track is null
             then raise exception 'there is no track in this album';
