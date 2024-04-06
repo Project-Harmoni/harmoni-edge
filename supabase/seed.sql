@@ -123,104 +123,78 @@ BEGIN
     );
 END $$;
 
---TODO: add seed data for songs and other tables using 
---the artist and listener IDs
+
+
 DO $$
 DECLARE
     artist_id_fk uuid;
     album_id_fk bigint;
     album_id_fk_2 bigint;
+    album_test_name text;
+    album_test_name_2 text;
 BEGIN
     artist_id_fk := ( SELECT artist_id FROM artists WHERE ( artist_name = 'artist-user'));
+    album_test_name := 'album_1';
+    album_test_name_2 := 'album_2';
     album_id_fk := ( SELECT album_id FROM albums WHERE ( artist_id = artist_id_fk AND album_name = 'album_1'));
     album_id_fk_2 := ( SELECT album_id FROM albums WHERE ( artist_id = artist_id_fk AND album_name = 'album_2'));
-    INSERT INTO public.songs (album_id,
+    INSERT INTO public.songs (album_name,
         artist_id,
         cover_image_path,
         is_explicit,
-        payout_threshold,
-        payout_percent,
         song_file_path,
         song_name,
         stream_count,
         ordinal)
     VALUES (
-        album_id_fk,
+        album_test_name,
         artist_id_fk,
         'link.com/dkjf/',
         False,
-        10,
-        0.5,
         'link/song.mp3',
         'nice_m4',
         0,
         1
     ),
     (
-        album_id_fk,
+        album_test_name,
         artist_id_fk,
         'link.com/dkjf/',
         False,
-        10,
-        0.5,
         'link/song_2.mp3',
         'nice_m4_2',
         0,
         2
     ),
     (
-        album_id_fk,
+        album_test_name_2,
         artist_id_fk,
         'link.com/dkjf/',
         False,
-        10,
-        0.5,
         'link/song_3.mp3',
         'nice_m4_3',
-        0,
-        3
-    ),
-    (
-        album_id_fk_2,
-        artist_id_fk,
-        'link.com/dkjf/',
-        False,
-        10,
-        0.5,
-        'link/song.mp3',
-        'nice_m4',
         0,
         1
+    );
+
+    INSERT INTO public.song_album(song_id,album_id)
+    VALUES (
+        public.get_song_id('nice_m4'),
+        album_id_fk
     ),
     (
-        album_id_fk_2,
-        artist_id_fk,
-        'link.com/dkjf/',
-        False,
-        10,
-        0.5,
-        'link/song_2.mp3',
-        'nice_m4_2',
-        0,
-        2
+        public.get_song_id('nice_m4_2'),
+        album_id_fk
     ),
     (
-        album_id_fk_2,
-        artist_id_fk,
-        'link.com/dkjf/',
-        False,
-        10,
-        0.5,
-        'link/song_3.mp3',
-        'nice_m4_3',
-        0,
-        3
+        public.get_song_id('nice_m4_3'),
+        album_id_fk_2
     );
 END $$;
 
 -- We need tag categories, seed them here
 INSERT INTO public.tag_category (category_name)
-    VALUES ('genres'),('instruments'),('moods'),('uncategorized');
+    VALUES ('genres'),('instruments'),('moods'),('miscellaneous');
 
 DO $$
 DECLARE

@@ -49,7 +49,7 @@ begin
         then raise exception 'Invalid album id';
     end if;
     -- loop through the tracks in the album to delete each single one
-    for track in select song_id from songs where album_id = del_id
+    for track in select song_id from song_album where album_id = del_id
     loop
         -- check if there is tracks in the album, if null then exit loop
         if track is null
