@@ -71,6 +71,10 @@ you will need an online Supabase project.
 You can create an online test environment for free.
 Access https://supabase.com/ and click “Start Your Project.”
 
+After creating the project, access the project dashboard:
+https://supabase.com/dashboard/project/(your-project-key)
+Under Storage, create two public buckets called "images" and "music".
+
 Alternatively, if you have been granted team credentials,
 an online test environment exists and is accessible for Harmoni at:
 
@@ -122,4 +126,9 @@ https://supabase.com/docs/guides/cli/local-development
 
 Note: some of Supabase's documentation discusses creating a new git repo 
 and config.toml, but this is not needed to deploy a pre-existing codebase.
+
+## Security Advisory
+Project Harmoni in its current state provides a functional backbone.
+For a secure production, this project will require changes to support
+Supabase's row-level security and private buckets.
 
