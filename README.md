@@ -73,7 +73,13 @@ Access https://supabase.com/ and click “Start Your Project.”
 
 After creating the project, access the project dashboard:
 https://supabase.com/dashboard/project/(your-project-key)
-Under Storage, create two public buckets called "images" and "music".
+
+Under Storage, create two public buckets called "images" and "music,"
+which will hold album covers and sountracks for the app.
+
+Under Edge Functions, create two secrets for interacting with Web3:
+ALCHEMY_URL
+TOKEN_CONTRACT_ADDRESS
 
 Alternatively, if you have been granted team credentials,
 an online test environment exists and is accessible for Harmoni at:
@@ -82,13 +88,12 @@ https://supabase.com/dashboard/project/jfnwxnzeswkzvsudcgew
 
 The final piece in the URL is the project key.
 
-
-The suggested workflow is as follows:
+The suggested workflow for new changes is as follows:
 - Create a new migration and check its effects locally
 - Push to the online environment
 - If all looks good, commit to git repo
 
-To push local dev-stage changes to the online project,
+To push local migrations and functions to the online project,
 first log in from the terminal via
 
 supabase login
@@ -101,7 +106,7 @@ Login requires the database password. You should already
 have it or be able to reset it via the Supabase dashboard
 (see Settings > Database).
 
-Note as well that the CLI may report this:
+Note as well that the CLI may report this if pushing to a new project:
 "Local config differs from linked project. Try updating supabase/config.toml"
 
 This is expected. You can ignore it.
@@ -114,11 +119,12 @@ And deploy edge functions via
 
 supabase functions deploy function-name-here
 
-Note: you will need to run “functions deploy” multiple times, once for each edge function. Each subfolder in harmoni-edge/supabase/functions/ is a function name.
+Note: for a new online test environment, you will need to run 
+“functions deploy” multiple times, once for each edge function. 
+Each subfolder in harmoni-edge/supabase/functions/ is a function name.
 
-The push is for migrations (structure and database function changes)
-and does not include seed data.
-This avoids unintentional changes to the online test data.
+The push is for migrations (structure and database function changes).
+It does not push seed data or add or drop rows in tables.
 
 For further details, see the "Deploy your project" section 
 in the local development guide:
