@@ -167,7 +167,7 @@
             throw new Error('Error retrieving user_type')
         }
 
-        const isListener = data['user_type'] === 'Listener'
+        const isListener = data['user_type'] === 'listener'
 
         return isListener
     }
