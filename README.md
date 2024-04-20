@@ -74,9 +74,6 @@ Access https://supabase.com/ and click “Start Your Project.”
 After creating the project, access the project dashboard:
 https://supabase.com/dashboard/project/(your-project-key)
 
-Under Storage, create two public buckets called "images" and "music,"
-which will hold album covers and sountracks for the app.
-
 Under Edge Functions, create two secrets for interacting with Web3:
 ALCHEMY_URL
 TOKEN_CONTRACT_ADDRESS
