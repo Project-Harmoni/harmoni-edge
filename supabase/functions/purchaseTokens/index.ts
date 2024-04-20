@@ -1,6 +1,19 @@
+/**
+ * This Deno program handles token purchase requests from users, updates their token balance in a Supabase database,
+ * and performs token transfers using the ethers.js library connected to an Alchemy Ethereum node.
+ * It ensures that only POST requests are processed and validates input before fetching and updating data in Supabase,
+ * and executing token transfers on the blockchain.
+ */
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js'
 import { ethers } from 'https://cdn.skypack.dev/ethers@5.6.8'
 
+/**
+ * Handles the purchase of tokens by a user. Validates the request method and body,
+ * fetches the user's public key from Supabase, updates the token balance, and transfers tokens.
+ * @param request The incoming HTTP request object containing the user ID and token quantity to be purchased.
+ * @returns A HTTP Response object with the result of the token purchase process.
+ */
 async function purchaseTokens(request) {
 
     // Only allow POST requests for this operation
@@ -97,6 +110,11 @@ async function purchaseTokens(request) {
     
 }
 
+/**
+ * Performs the token transfer from the master account to a receiver's public key.
+ * @param public_key The public key of the receiver to whom tokens are transferred.
+ * @param tokenQuantity The amount of tokens to transfer, expressed as a string.
+ */
 async function transferTokens(public_key, tokenQuantity) {
     console.log("Public key: ", public_key)
     console.log("Tokens: ")
