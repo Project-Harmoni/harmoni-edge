@@ -1,16 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js'
 
-//TO DO: CHECK SONG STREAM COUNT IF PAYOUT HIT
-
-//TO DO: IF PAYOUT HIT TRIGGER PAYOUT FUNTION
-
-//TO DO: Transfer token to artist wallet
-
-//TO DO: Deduct token from customer wallet
-
-//TO DO: Increase artist amount by 1 token on database
-
-
 
 async function playSong(request) {
   
@@ -35,7 +24,7 @@ async function playSong(request) {
 
   const userId = body.userId
   if (!userId){
-      return new Response(JSON.stringify({error: 'Missing songId'}), {status: 400, headers: {'Content-Type': 'application/json'}})
+      return new Response(JSON.stringify({error: 'Missing userId'}), {status: 400, headers: {'Content-Type': 'application/json'}})
   }
   
   const supabase = createClient(
@@ -46,7 +35,7 @@ async function playSong(request) {
 
   const { data, error } = await supabase
   .from('songs')
-  .select('stream_count, is_free')   
+  .select('stream_count, is_free, artist_id, payout_percent, payout_threshold')   
   .eq('song_id', songId)
 
   if (error) {
@@ -55,12 +44,44 @@ async function playSong(request) {
     { status: 500, headers: { 'Content-Type': 'application/json' } });
 }
 
+
 if (!data || data.length === 0) {
     return new Response(JSON.stringify({ message: 'No records found for the specified song ID' }), 
     { status: 404, headers: { 'Content-Type': 'application/json' } });
 }
 
 if(!data[0].is_free){
+
+  // increase artist tokens
+  let {data: artistTransferData, error: artistTransferError} = await supabase
+        .from('artists')
+        .select('tokens, total_artist_streams')
+        .eq('artist_id', data[0].artist_id)
+        .single()
+
+  console.log(artistTransferData)
+
+  let artistTokens = artistTransferData.tokens + 1
+
+  // update with new amount 
+  const {error: updateArtistError} = await supabase
+  .from('artists')
+  .update({tokens: artistTokens})
+  .eq('artist_id', data[0].artist_id)
+  console.log("Transferred one token to artist")
+
+  //if < 10,000, transfer bonus token from master wallet
+  if (artistTransferData.total_artist_streams <= 10000){
+    artistTokens += 1
+    const {error: updateBonusArtistError} = await supabase
+    .from('artists')
+    .update({tokens: artistTokens})
+    .eq('artist_id', data[0].artist_id)
+    console.log("Transferred bonus token to artist")
+  }
+  
+  
+  //TO DO: transfer tokens from listener to artist wallet
 
   // decrease listener tokens
   let {data: listenerData, error: listenerError} = await supabase
@@ -78,38 +99,62 @@ if(!data[0].is_free){
   .update({tokens: newTokens})
   .eq('listener_id', userId)
 
-  // increment song count
-  let {data: songData, error: songError} = await supabase
-        .from('songs')
-        .select('stream_count')
-        .eq('song_id', songId)
-        .single()
-  
-  const newSongCount = songData.stream_count + 1
-
-  const {error: songUpdateError} = await supabase
-  .from('songs')
-  .update({stream_count: newSongCount})
-  .eq('song_id', songId)
-
-  // increment listener streams
-  const { data: streamData, error: countError } = await supabase
-        .from('listener_song_stream')
-        .select('counter_streams')
-        .eq('song_id', songId)
-        .eq('listener_id', userId)
-        .single()
-
-  
-  const newSongStream = streamData.counter_streams + 1
-
-  const {error: streamError} = await supabase
-  .from('listener_song_stream')
-  .update({counter_streams: newSongStream})
-  .eq('song_id', songId)
-
-
+ 
 }
+
+// increment song count
+let {data: songData, error: songError} = await supabase
+      .from('songs')
+      .select('stream_count')
+      .eq('song_id', songId)
+      .single()
+
+const newSongCount = songData.stream_count + 1
+
+const {error: songUpdateError} = await supabase
+.from('songs')
+.update({stream_count: newSongCount})
+.eq('song_id', songId)
+
+// increment listener streams
+const { data: streamData, error: countError } = await supabase
+      .from('listener_song_stream')
+      .select('counter_streams')
+      .eq('song_id', songId)
+      .eq('listener_id', userId)
+      .single()
+
+
+const newSongStream = streamData.counter_streams + 1
+
+const {error: streamError} = await supabase
+.from('listener_song_stream')
+.update({counter_streams: newSongStream})
+.eq('listener_id', userId)
+
+// TO DO: check for payout if song not free
+if (newSongCount >= data[0].payout_threshold && !data[0].is_free){
+  console.log("Payout function called!")
+  const functionName = 'songPayout'; 
+
+    try {
+    const { data, error } = await supabase.functions.invoke(functionName, {
+        body: {songId: "1"}
+    });
+
+    if (error) {
+        console.error('Error invoking function:', error);
+        return;
+    }
+
+    console.log('Function response:', data);
+
+    } catch (error) {
+    console.error('Exception when calling function:', error);
+    }
+}
+
+// TO DO: if payout, call payout function
   
 
   return new Response(JSON.stringify({ data }), { status: 200, headers: { 'Content-Type': 'application/json' } });
@@ -121,30 +166,6 @@ Deno.serve(async (request) =>{
 
   return playSong(request)
    
-
-    // const functionName = 'songPayout'; 
-
-    // try {
-    // const { data, error } = await supabase.functions.invoke(functionName, {
-    //     body: {songId: "1"}
-    // });
-
-    // if (error) {
-    //     console.error('Error invoking function:', error);
-    //     return;
-    // }
-
-    // console.log('Function response:', data);
-
-    // return new Response(
-    //   JSON.stringify(data),
-    //   { headers: { "Content-Type": "application/json" } },
-
-    // )
-    // } catch (error) {
-    // console.error('Exception when calling function:', error);
-    // }
-    
  })
 
  /* To invoke locally:

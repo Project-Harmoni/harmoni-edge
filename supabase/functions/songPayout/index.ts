@@ -66,6 +66,15 @@ async function payoutAsong(request) {
         
         processListenersData(supabase, songId, data, artistData)
 
+        // // set song counter to 0
+        // const {error: songCountUpdateError} = await supabase
+        // .from('songs')
+        // .update({stream_count: 0})
+        // .eq('song_id', song_id)
+        // if (songCountUpdateError) {
+        //     console.error('Error updating tokens:', updateError);
+        // }
+
         return new Response(JSON.stringify({ data, artistData }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     } catch (error) {
         console.error('Error in processing:', error);
@@ -86,10 +95,9 @@ async function processListenersData(supabase, songId, data, artistData) {
 
     // create sender wallet for artist
     const privateKey = artistData[0].artist.users.private_key
-    console.log(privateKey)
     const transferWallet = new ethers.Wallet(privateKey, alchemyProvider)
     const contractWithSigner = tokenContract.connect(transferWallet)
-
+    console.log(data)
     for(let i=0; i < data.length; i++){
         const listener = data[i].listener_id
         // create receiver wallet
@@ -97,6 +105,7 @@ async function processListenersData(supabase, songId, data, artistData) {
         
         //send tokens to listener wallet
         const tokenAmount = data[i].counter_streams * (artistData[0].payout_percent/100)
+        console.log(data[i].counter_streams)
         console.log(tokenAmount)
         const amountInWei = ethers.utils.parseUnits(tokenAmount.toString(), 18)
 
@@ -137,7 +146,7 @@ async function processListenersData(supabase, songId, data, artistData) {
             console.error('Error updating tokens:', updateError);
             //throw new Error('Error updating tokens after subtraction');
         }
-        console.log('Tokens decreased successfully for userId:', artistData[0].artist_id);
+        console.log('Tokens increased successfully for userId:', listener);
         // get current balance of artist tokens
         let {data: artistsData, error: artistError} = await supabase
         .from('artists')
@@ -158,20 +167,16 @@ async function processListenersData(supabase, songId, data, artistData) {
             console.error('Error updating tokens:', updateError);
             //throw new Error('Error updating tokens after subtraction');
         }
+        
     }
 
     
 }
 
-
-
-
 // Starts the Deno server to handle incoming HTTP requests
 Deno.serve(async (request) =>{
 
-   return payoutAsong(request)
-    
-    
+   return payoutAsong(request)    
 })
 
 /* To invoke locally:
