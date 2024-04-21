@@ -30,59 +30,75 @@ async function payoutAsong(request) {
         { global: { headers: { Authorization: request.headers.get('Authorization')! } } }
     )
 
-    // get listeners and total song count for a song
-    try {
-        const { data, error } = await supabase
-            .from('listener_song_stream')
-            .select('listener_id, counter_streams, listener: users!inner(public_key)')   
-            .eq('song_id', songId)
-
-        if (error) {
-            console.error('Supabase error:', error);
-            return new Response(JSON.stringify({ error: 'Error fetching data' }), 
-            { status: 500, headers: { 'Content-Type': 'application/json' } });
-        }
-
-        if (!data || data.length === 0) {
-            return new Response(JSON.stringify({ message: 'No records found for the specified song ID' }), 
-            { status: 404, headers: { 'Content-Type': 'application/json' } });
-        }
-        // get artist id for song
-        const { data: artistData, error: artistError } = await supabase
+    const { data: songData, error: songError } = await supabase
             .from('songs')
-            .select('artist_id, artist: artists!inner(users!inner(private_key)), artist_payout_percentage')   
+            .select('stream_count, payout_threshold')   
             .eq('song_id', songId)
-        
-        if (artistError) {
-            console.error('Error fetching artist ID:', artistError);
-            return new Response(JSON.stringify({ error: 'Error fetching artist data' }), 
+
+        if (songError) {
+            console.error('Supabase error:', error);
+            return new Response(JSON.stringify({ error: 'Error fetching song stream count' }), 
             { status: 500, headers: { 'Content-Type': 'application/json' } });
         }
-        
-        if (!artistData) {
-            return new Response(JSON.stringify({ message: 'No artist found for the specified song ID' }), 
-            { status: 404, headers: { 'Content-Type': 'application/json' } });
-        }
-        
-        processListenersData(supabase, songId, data, artistData)
+    
+    if (songData[0].stream_count >= songData[0].payout_threshold){
+        // get listeners and total song count for a song
+        try {
+            const { data, error } = await supabase
+                .from('listener_song_stream')
+                .select('listener_id, counter_streams, listener: users!inner(public_key)')   
+                .eq('song_id', songId)
 
-        // set song counter to 0
-        const {error: songCountUpdateError} = await supabase
-        .from('songs')
-        .update({stream_count: 0})
-        .eq('song_id', songId)
-        if (songCountUpdateError) {
-            console.error('Error updating tokens:', updateError);
-        }
+            if (error) {
+                console.error('Supabase error:', error);
+                return new Response(JSON.stringify({ error: 'Error fetching data' }), 
+                { status: 500, headers: { 'Content-Type': 'application/json' } });
+            }
 
-        return new Response(JSON.stringify({ data, artistData }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-    } catch (error) {
-        console.error('Error in processing:', error);
-        return new Response(JSON.stringify({ error: 'Internal Server Error' }), 
-        { status: 500, headers: { 'Content-Type': 'application/json' } });
+            if (!data || data.length === 0) {
+                return new Response(JSON.stringify({ message: 'No records found for the specified song ID' }), 
+                { status: 404, headers: { 'Content-Type': 'application/json' } });
+            }
+            // get artist id for song
+            const { data: artistData, error: artistError } = await supabase
+                .from('songs')
+                .select('artist_id, artist: artists!inner(users!inner(private_key)), artist_payout_percentage')   
+                .eq('song_id', songId)
+            
+            if (artistError) {
+                console.error('Error fetching artist ID:', artistError);
+                return new Response(JSON.stringify({ error: 'Error fetching artist data' }), 
+                { status: 500, headers: { 'Content-Type': 'application/json' } });
+            }
+            
+            if (!artistData) {
+                return new Response(JSON.stringify({ message: 'No artist found for the specified song ID' }), 
+                { status: 404, headers: { 'Content-Type': 'application/json' } });
+            }
+            
+            processListenersData(supabase, songId, data, artistData)
+
+            // set song counter to 0
+            const {error: songCountUpdateError} = await supabase
+            .from('songs')
+            .update({stream_count: 0})
+            .eq('song_id', songId)
+            if (songCountUpdateError) {
+                console.error('Error updating tokens:', updateError);
+            }
+
+            return new Response(JSON.stringify({ data, artistData }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        } catch (error) {
+            console.error('Error in processing:', error);
+            return new Response(JSON.stringify({ error: 'Internal Server Error' }), 
+            { status: 500, headers: { 'Content-Type': 'application/json' } });
+        }
+    }else{
+        return new Response(JSON.stringify({ data: 'Payout threshold not met' }), 
+        { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
-
 }
+
 
 async function processListenersData(supabase, songId, data, artistData) {
 
