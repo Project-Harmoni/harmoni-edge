@@ -3,6 +3,5 @@ create table
 listener_song_likes (
     listener_id uuid references listeners,
     song_id bigint references songs on delete cascade,
-    like_song boolean,
     created_at timestamptz default now()
 )
