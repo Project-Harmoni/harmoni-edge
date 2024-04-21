@@ -1,7 +1,20 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js'
+import { ethers } from 'https://cdn.skypack.dev/ethers@5.6.8'
 
 
 async function playSong(request) {
+
+  const alchemyEndpoint = Deno.env.get('ALCHEMY_URL')
+  const alchemyProvider = new ethers.providers.JsonRpcProvider(alchemyEndpoint)
+
+  const tokenContractAddress = Deno.env.get('TOKEN_CONTRACT_ADDRESS')
+
+  const tokenAbi = ["function balanceOf(address owner) view returns (uint256)", "function transfer(address to, uint value) returns (bool)"]
+
+  // contract instance
+  const tokenContract = new ethers.Contract(tokenContractAddress, tokenAbi, alchemyProvider)
+  const masterWallet = new ethers.Wallet(Deno.env.get('MASTER_KEY'), alchemyProvider)
+  const contractWithSigner = tokenContract.connect(masterWallet)
   
   // Only allow POST requests for this operation
   if(request.method !== 'POST'){
@@ -33,6 +46,7 @@ async function playSong(request) {
     { global: { headers: { Authorization: request.headers.get('Authorization')! } } }
   )
 
+
   const { data, error } = await supabase
   .from('songs')
   .select('stream_count, is_free, artist_id, payout_percent, payout_threshold')   
@@ -40,67 +54,67 @@ async function playSong(request) {
 
   if (error) {
     console.error('Supabase error:', error);
-    return new Response(JSON.stringify({ error: 'Error fetching data' }), 
+    return new Response(JSON.stringify({ error: 'Error fetching song data' }), 
     { status: 500, headers: { 'Content-Type': 'application/json' } });
-}
+  }
 
 
-if (!data || data.length === 0) {
-    return new Response(JSON.stringify({ message: 'No records found for the specified song ID' }), 
-    { status: 404, headers: { 'Content-Type': 'application/json' } });
-}
+  if (!data || data.length === 0) {
+      return new Response(JSON.stringify({ message: 'No records found for the specified song ID' }), 
+      { status: 404, headers: { 'Content-Type': 'application/json' } });
+  }
 
-if(!data[0].is_free){
+  if(!data[0].is_free){
 
-  // increase artist tokens
-  let {data: artistTransferData, error: artistTransferError} = await supabase
-        .from('artists')
-        .select('tokens, total_artist_streams')
-        .eq('artist_id', data[0].artist_id)
-        .single()
+    // increase artist tokens
+    let {data: artistTransferData, error: artistTransferError} = await supabase
+          .from('artists')
+          .select('tokens, total_artist_streams, artist: users!inner(public_key)')
+          .eq('artist_id', data[0].artist_id)
+          .single()
 
-  console.log(artistTransferData)
+    console.log(artistTransferData)
 
-  let artistTokens = artistTransferData.tokens + 1
+    let artistTokens = artistTransferData.tokens + 1
 
-  // update with new amount 
-  const {error: updateArtistError} = await supabase
-  .from('artists')
-  .update({tokens: artistTokens})
-  .eq('artist_id', data[0].artist_id)
-  console.log("Transferred one token to artist")
-
-  //if < 10,000, transfer bonus token from master wallet
-  if (artistTransferData.total_artist_streams <= 10000){
-    artistTokens += 1
-    const {error: updateBonusArtistError} = await supabase
+    // update with new amount 
+    const {error: updateArtistError} = await supabase
     .from('artists')
     .update({tokens: artistTokens})
     .eq('artist_id', data[0].artist_id)
-    console.log("Transferred bonus token to artist")
-  }
+    console.log("Transferred one token to artist")
+
+    //if < 10,000, transfer bonus token from master wallet
+    if (artistTransferData.total_artist_streams <= 10000){
+      artistTokens += 1
+      const {error: updateBonusArtistError} = await supabase
+      .from('artists')
+      .update({tokens: artistTokens})
+      .eq('artist_id', data[0].artist_id)
+      console.log("Transferred bonus token to artist")
+    }
   
   
-  //TO DO: transfer tokens from listener to artist wallet
+    //TO DO: transfer tokens from listener to artist wallet
 
-  // decrease listener tokens
-  let {data: listenerData, error: listenerError} = await supabase
-        .from('listeners')
-        .select('tokens')
-        .eq('listener_id', userId)
-        .single()
-  console.log(listenerData)
+    // decrease listener tokens
+    let {data: listenerData, error: listenerError} = await supabase
+          .from('listeners')
+          .select('tokens')
+          .eq('listener_id', userId)
+          .single()
+    console.log(listenerData)
 
-  const newTokens = listenerData.tokens - 1
+    const newTokens = listenerData.tokens - 1
 
-  // update with new amount
-  const {error: updateError} = await supabase
-  .from('listeners')
-  .update({tokens: newTokens})
-  .eq('listener_id', userId)
+    // update with new amount
+    const {error: updateError} = await supabase
+    .from('listeners')
+    .update({tokens: newTokens})
+    .eq('listener_id', userId)
 
  
-}
+  }
 
 // increment song count
 let {data: songData, error: songError} = await supabase
@@ -153,9 +167,6 @@ if (newSongCount >= data[0].payout_threshold && !data[0].is_free){
     console.error('Exception when calling function:', error);
     }
 }
-
-// TO DO: if payout, call payout function
-  
 
   return new Response(JSON.stringify({ data }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 

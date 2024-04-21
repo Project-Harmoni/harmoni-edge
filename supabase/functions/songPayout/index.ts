@@ -66,14 +66,14 @@ async function payoutAsong(request) {
         
         processListenersData(supabase, songId, data, artistData)
 
-        // // set song counter to 0
-        // const {error: songCountUpdateError} = await supabase
-        // .from('songs')
-        // .update({stream_count: 0})
-        // .eq('song_id', song_id)
-        // if (songCountUpdateError) {
-        //     console.error('Error updating tokens:', updateError);
-        // }
+        // set song counter to 0
+        const {error: songCountUpdateError} = await supabase
+        .from('songs')
+        .update({stream_count: 0})
+        .eq('song_id', songId)
+        if (songCountUpdateError) {
+            console.error('Error updating tokens:', updateError);
+        }
 
         return new Response(JSON.stringify({ data, artistData }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     } catch (error) {
@@ -109,13 +109,13 @@ async function processListenersData(supabase, songId, data, artistData) {
         console.log(tokenAmount)
         const amountInWei = ethers.utils.parseUnits(tokenAmount.toString(), 18)
 
-        // try {
-        //     const transaction = await contractWithSigner.transfer(receiverWallet, amountInWei);
-        //     console.log('Transfer successful', transaction);
-        // } catch (transferError) {
-        //     console.error('Transfer error:', transferError);
-        //     return;  // Stop execution and handle the error appropriately
-        // }
+        try {
+            const transaction = await contractWithSigner.transfer(receiverWallet, amountInWei);
+            console.log('Transfer successful', transaction);
+        } catch (transferError) {
+            console.error('Transfer error:', transferError);
+            return;  // Stop execution and handle the error appropriately
+        }
         //set count_stream to 0
         const { data: streamData, error: countError } = await supabase
         .from('listener_song_stream')
