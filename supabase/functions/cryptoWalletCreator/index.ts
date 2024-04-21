@@ -167,7 +167,7 @@
             throw new Error('Error retrieving user_type')
         }
 
-        const isListener = data['user_type'] === 'listener'
+        const isListener = data['user_type'].toLowerCase() === 'listener'
 
         return isListener
     }
