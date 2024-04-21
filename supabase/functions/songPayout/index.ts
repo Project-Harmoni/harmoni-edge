@@ -34,7 +34,7 @@ async function payoutAsong(request) {
     try {
         const { data, error } = await supabase
             .from('listener_song_stream')
-            .select('listener_id, counter_streams, listener: listeners!inner(users!inner(public_key))')   
+            .select('listener_id, counter_streams, listener: users!inner(public_key)')   
             .eq('song_id', songId)
 
         if (error) {
@@ -50,7 +50,7 @@ async function payoutAsong(request) {
         // get artist id for song
         const { data: artistData, error: artistError } = await supabase
             .from('songs')
-            .select('artist_id, artist: artists!inner(users!inner(private_key)), payout_percent')   
+            .select('artist_id, artist: artists!inner(users!inner(private_key)), artist_payout_percentage')   
             .eq('song_id', songId)
         
         if (artistError) {
@@ -101,10 +101,10 @@ async function processListenersData(supabase, songId, data, artistData) {
     for(let i=0; i < data.length; i++){
         const listener = data[i].listener_id
         // create receiver wallet
-        const receiverWallet = data[i].listener.users.public_key
+        const receiverWallet = data[i].listener.public_key
         
         //send tokens to listener wallet
-        const tokenAmount = data[i].counter_streams * (artistData[0].payout_percent/100)
+        const tokenAmount = data[i].counter_streams * (artistData[0].artist_payout_percentage/100)
         console.log(data[i].counter_streams)
         console.log(tokenAmount)
         const amountInWei = ethers.utils.parseUnits(tokenAmount.toString(), 18)
