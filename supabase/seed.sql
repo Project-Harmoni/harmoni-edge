@@ -1,9 +1,13 @@
---Simple seed data for local tests. In progress; we'll continue to add to this
---For auth.users, borrowed the seeding solution from 
---https://github.com/orgs/supabase/discussions/5043#discussioncomment-6191165
+--Simple seed data for local tests.
+
+-- Function for generating test users.
+-- For auth.users, borrowed the seeding solution from 
+-- https://github.com/orgs/supabase/discussions/5043#discussioncomment-6191165
 CREATE OR REPLACE FUNCTION public.create_seed_user(
     email text,
-    password text
+    password text,
+    seed_name text,
+    seed_type text
 ) RETURNS uuid AS $$
     declare
     user_id uuid;
@@ -16,73 +20,70 @@ BEGIN
         (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, recovery_sent_at, last_sign_in_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token)
     VALUES
         ('00000000-0000-0000-0000-000000000000', user_id, 'authenticated', 'authenticated', email, encrypted_pw, '2023-05-03 19:41:43.585805+00', '2023-04-22 13:10:03.275387+00', '2023-04-22 13:10:31.458239+00', '{"provider":"email","providers":["email"]}', '{}', '2023-05-03 19:41:43.580424+00', '2023-05-03 19:41:43.585948+00', '', '', '', '');
+    INSERT INTO public.users
+        (user_id, user_name, user_type)
+    VALUES
+        (user_id, seed_name, seed_type);
+    IF seed_type = 'artist' THEN 
+        INSERT INTO public.artists
+            (artist_id, artist_name)
+        VALUES
+            (user_id, seed_name);
+    END IF;
+    IF seed_type = 'listener' THEN
+        INSERT INTO public.listeners
+            (listener_id, listener_name)
+        VALUES
+            (user_id, seed_name);
+    END IF;
     RETURN user_id;
 END;
 $$ LANGUAGE plpgsql;
 
--- Create an artist-user
-DO $$
-DECLARE 
+-- Function for quickly getting user ID from name.
+-- For use with seeding later on.
+CREATE OR REPLACE FUNCTION public.get_user_from_name(
+    username text
+)
+RETURNS uuid AS $$
+    declare
     user_id uuid;
 BEGIN
-    user_id := public.create_seed_user('artist@gmail.com','artistpassword');
-    INSERT INTO public.users
-        (user_id, user_name, user_type)
-    VALUES
-        (user_id, 'artist-user', 'artist');
-    INSERT INTO public.artists
-        (artist_id, artist_name, biography, tokens)
-    VALUES
-        (user_id,'artist-user','new zealand guitarist playing bass guitar',0);
-END $$;
+    SELECT into user_id user_id FROM users WHERE ( user_name = username);
+    RETURN user_id;
+END;
+$$ LANGUAGE plpgsql;
 
 
--- Create a listener user
+-- Create users: one artist and three listeners
 DO $$
-DECLARE 
+DECLARE
     user_id uuid;
 BEGIN
-    user_id := public.create_seed_user('listener@gmail.com','listenerpassword');
-    INSERT INTO public.users
-        (user_id, user_name, user_type)
-    VALUES
-        (user_id, 'listener-user', 'listener');
-    INSERT INTO public.listeners
-        (listener_id, listener_name, email, tokens)
-    VALUES
-        (user_id, 'listener-user','listener@gmail.com',0);
-END $$;
-
--- Create a 2nd listener user
-DO $$
-DECLARE 
-    user_id uuid;
-BEGIN
-    user_id := public.create_seed_user('listener2@gmail.com','listenerpassword');
-    INSERT INTO public.users
-        (user_id, user_name, user_type)
-    VALUES
-        (user_id, 'listener-user', 'listener');
-    INSERT INTO public.listeners
-        (listener_id, listener_name, email, tokens)
-    VALUES
-        (user_id, 'listener-user','listener@gmail.com',0);
-END $$;
-
--- Create a 3rd listener user
-DO $$
-DECLARE 
-    user_id uuid;
-BEGIN
-    user_id := public.create_seed_user('listener3@gmail.com','listenerpassword');
-    INSERT INTO public.users
-        (user_id, user_name, user_type)
-    VALUES
-        (user_id, 'listener-user', 'listener');
-    INSERT INTO public.listeners
-        (listener_id, listener_name, email, tokens)
-    VALUES
-        (user_id, 'listener-user','listener@gmail.com',0);
+    user_id := public.create_seed_user(
+        'artist@gmail.com',
+        'artistpassword',
+        'artist-user',
+        'artist'
+    );
+    user_id := public.create_seed_user(
+        'listener@gmail.com',
+        'listenerpassword',
+        'listener-user',
+        'listener'
+    );
+    user_id := public.create_seed_user(
+        'listener2@gmail.com',
+        'listener2password',
+        'listener2-user',
+        'listener'
+    );
+    user_id := public.create_seed_user(
+        'listener3@gmail.com',
+        'listener3password',
+        'listener3-user',
+        'listener'
+    );
 END $$;
 
 -- create an album
@@ -192,9 +193,6 @@ BEGIN
     );
 END $$;
 
--- We need tag categories, seed them here
-INSERT INTO public.tag_category (category_name)
-    VALUES ('genres'),('instruments'),('moods'),('miscellaneous');
 
 DO $$
 DECLARE
@@ -205,31 +203,54 @@ BEGIN
     tag_id_fk := public.add_song_tag(
         public.get_song_id('nice_m4'),
         'funky-genre',
-        public.get_tag_category_id('genres')
+        public.get_tag_category_id('Genres')
     );
     tag_id_fk := public.add_song_tag(
         public.get_song_id('nice_m4_3'),
         'funky-genre',
-        public.get_tag_category_id('genres')
+        public.get_tag_category_id('Genres')
     );
     tag_id_fk := public.add_song_tag(
         public.get_song_id('nice_m4'), 
         'happy',
-        public.get_tag_category_id('moods')
+        public.get_tag_category_id('Moods')
     );
     tag_id_fk := public.add_song_tag(
         public.get_song_id('nice_m4_3'), 
         'somber',
-        public.get_tag_category_id('moods')
+        public.get_tag_category_id('Moods')
     );
     tag_count = public.add_many_song_tags(
         1,
         ARRAY['voice','piano','violin'],
-        public.get_tag_category_id('instruments')
+        public.get_tag_category_id('Instruments')
     );
     tag_count = public.add_many_song_tags(
         2,
         ARRAY['voice','piano'],
-        public.get_tag_category_id('instruments')
+        public.get_tag_category_id('Instruments')
     );
 END $$;
+
+-- Exercise the library functions: add favorites by song and album
+DO $$
+DECLARE
+    lib_listener_id uuid;
+    lib_song_id bigint;
+    lib_album_id bigint;
+    temp int;
+BEGIN
+    lib_listener_id := ( SELECT listener_id FROM listeners WHERE ( listener_name = 'listener-user'));
+    lib_song_id := public.get_song_id('nice_m4');
+    lib_album_id := ( SELECT album_id FROM albums WHERE album_name = 'album_2');
+    temp := public.add_library_song(lib_listener_id, lib_song_id);
+    temp := public.add_library_album(lib_listener_id, lib_album_id);
+
+    lib_listener_id := (SELECT listener_id FROM listeners WHERE ( listener_name = 'listener2-user'));
+    lib_album_id := ( SELECT album_id FROM albums WHERE album_name = 'album_1');
+    temp := public.add_library_album(lib_listener_id, lib_album_id);
+    temp := public.delete_library_song(lib_listener_id,1);
+
+END $$;
+
+
