@@ -6,8 +6,7 @@
 
 console.log("Email edge function");
 
-const RESEND_API_KEY = Deno.env.get( "RESEND_API_KEY" );
-const EMAIL = Deno.env.get( "EMAIL" );
+const RESEND_COPY_API_KEY = Deno.env.get( "RESEND_API_KEY" );
 import { createClient } from 'https://esm.sh/@supabase/supabase-js';
 
 
@@ -104,7 +103,7 @@ const sendCopyrightEmail = async ( _request: Request ): Promise<Response> => {
         method: 'POST',
         headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${RESEND_API_KEY}`,
+        Authorization: `Bearer ${RESEND_COPY_API_KEY}`,
         },
         body: JSON.stringify( {
         from: 'team@harmoni.dev',
