@@ -28,7 +28,6 @@ async function getUserInfo ( supabase, userId ) {
 // fetch song info with song id
 async function getSongInfo ( supabase, songId ) {
     // fetch song info
-    console.log('here')
     const { data: songData, error: fetchError } = await supabase
         .from( 'songs' )
         .select( 'song_name' )
