@@ -44,9 +44,15 @@ async function playSong(request) {
   // check listener balance and throw error if too low and create listener wallet if not
   const {data: listenerData, error: listenerError} = await supabase
   .from('listeners')
-  .select('tokens, listener: users!inner(private_key)')
+  .select('tokens, listener: users!inner(private_key), table: users!inner(user_type)')
   .eq('listener_id', userId)
   .single()
+
+  if (listenerError) {
+    console.error('Supabase error:', error);
+    return new Response(JSON.stringify({ error: 'Error fetching song data' }), 
+    { status: 500, headers: { 'Content-Type': 'application/json' } });
+  }
 
   if (listenerData.tokens < 1){
     return new Response(JSON.stringify({ error: 'Insufficient balance' }), 
@@ -67,24 +73,26 @@ async function playSong(request) {
     { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 
+  if (!data || data.length === 0) {
+    return new Response(JSON.stringify({ message: 'No records found for the specified song ID' }), 
+    { status: 404, headers: { 'Content-Type': 'application/json' } });
+  }
+
   let {data: artistTransferData, error: artistTransferError} = await supabase
           .from('artists')
           .select('tokens, total_artist_streams, artist: users!inner(public_key)')
           .eq('artist_id', data[0].artist_id)
           .single()
-
-  // create artist wallet
-  const artistWallet = artistTransferData.artist.public_key
-  console.log("Artist wallet: ", artistWallet)
-
-
-
-  if (!data || data.length === 0) {
-      return new Response(JSON.stringify({ message: 'No records found for the specified song ID' }), 
-      { status: 404, headers: { 'Content-Type': 'application/json' } });
+  
+  if (artistTransferError) {
+    console.error('Supabase error:', error);
+    return new Response(JSON.stringify({ error: 'Error fetching artistTransfer data' }), 
+    { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 
   if(!data[0].is_free){
+    // create artist wallet
+    const artistWallet = artistTransferData.artist.public_key
     const songFee = 1
     let transferTokens = songFee
 
@@ -156,27 +164,28 @@ async function playSong(request) {
       .eq('artist_id', data[0].artist_id)
       console.log("Updated artist streams")
     
-  
-  
-    //TO DO: transfer tokens from listener to artist wallet
-
     // decrease listener tokens
-    let {data: listenerData, error: listenerError} = await supabase
-          .from('listeners')
+    let table
+    if(listenerData.table.user_type === "listener"){
+      table = "listeners"
+    }else{
+      table = "artists"
+    }
+    console.log("Table: ",table)
+    let {data: listenerDataUpdate, error: listenerErrorUpdate} = await supabase
+          .from(table)
           .select('tokens')
           .eq('listener_id', userId)
           .single()
-    console.log(listenerData)
+    console.log(listenerDataUpdate)
 
     const newTokens = listenerData.tokens - 1
 
     // update with new amount
     const {error: updateError} = await supabase
-    .from('listeners')
+    .from(table)
     .update({tokens: newTokens})
     .eq('listener_id', userId)
-
- 
   }
 
   // increment song count
@@ -232,8 +241,6 @@ async function playSong(request) {
     return new Response(JSON.stringify({ data }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   
 }
-
-
 
 Deno.serve(async (request) =>{
 
