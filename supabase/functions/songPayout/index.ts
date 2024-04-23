@@ -35,11 +35,16 @@ async function payoutAsong(request) {
             .select('stream_count, payout_threshold')   
             .eq('song_id', songId)
 
-        if (songError) {
-            console.error('Supabase error:', error);
-            return new Response(JSON.stringify({ error: 'Error fetching song stream count' }), 
-            { status: 500, headers: { 'Content-Type': 'application/json' } });
-        }
+    if (songError) {
+        console.error('Supabase error:', error);
+        return new Response(JSON.stringify({ error: 'Error fetching song stream count' }), 
+        { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    if (!songData || songData.length === 0) {
+        return new Response(JSON.stringify({ message: 'No records found for the specified song ID' }), 
+        { status: 404, headers: { 'Content-Type': 'application/json' } });
+    }
     
     if (songData[0].stream_count >= songData[0].payout_threshold){
         // get listeners and total song count for a song
@@ -56,7 +61,7 @@ async function payoutAsong(request) {
             }
 
             if (!data || data.length === 0) {
-                return new Response(JSON.stringify({ message: 'No records found for the specified song ID' }), 
+                return new Response(JSON.stringify({ message: 'No records found for the specified listener stream song ID' }), 
                 { status: 404, headers: { 'Content-Type': 'application/json' } });
             }
             // get artist id for song
@@ -183,6 +188,8 @@ async function processListenersData(supabase, songId, data, artistData) {
             console.error('Error updating tokens:', updateError);
             //throw new Error('Error updating tokens after subtraction');
         }
+
+        // TO DO: reset song count to zero
         
     }
 
