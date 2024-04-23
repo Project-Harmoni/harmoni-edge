@@ -4,7 +4,6 @@
 
 
 
-console.log("Email edge function");
 
 const RESEND_COPY_API_KEY = Deno.env.get( "RESEND_API_KEY" );
 import { createClient } from 'https://esm.sh/@supabase/supabase-js';
@@ -37,7 +36,6 @@ async function getSongInfo ( supabase, songId ) {
             return new Response( JSON.stringify( { error: 'Error fetching data' } ),
             { status: 500, headers: { 'Content-type': 'application/json' } } );
         }
-    console.log(songData)
     return songData
 }
 
@@ -88,7 +86,6 @@ const sendCopyrightEmail = async ( _request: Request ): Promise<Response> => {
 
     // calling function to retrieve info
     const userInfo = await getUserInfo( supabase, userId );
-    console.log(type)
     let mediaInfo;
     if ( type === 'song') {
         mediaInfo = await getSongInfo( supabase, mediaId )
@@ -96,7 +93,6 @@ const sendCopyrightEmail = async ( _request: Request ): Promise<Response> => {
         mediaInfo = await getAlbumInfo( supabase, mediaId )
     } 
 
-    console.log(mediaInfo)
     // sending the email
     const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -114,7 +110,6 @@ const sendCopyrightEmail = async ( _request: Request ): Promise<Response> => {
                </div>`,
         }),
     })
-    console.log(res)
 
     // catching error if email wasnt send
     if ( !res.ok ) {

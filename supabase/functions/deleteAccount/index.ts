@@ -2,7 +2,6 @@
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, go to definition, etc.
 
-console.log("Hello from Functions!")
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js'
 
@@ -38,7 +37,8 @@ async function deleteAccountUser( request: Request) {
             deleteMetaDataUser( supabase, userId )
         } else if ( userType[0].user_type === 'artist') {
             // todo
-            deleteStorageItem( supabase, userId );
+            const linksDelete = await getItemFromBuckets( supabase, userId );
+            deleteStorageItem( supabase, userId, linksDelete );
             deleteMetaDataUser( supabase, userId )
         } else {
             // todo throw error
@@ -54,7 +54,7 @@ async function deleteAccountUser( request: Request) {
 async function deleteMetaDataUser( supabase, listenerId ) {
 
     console.log('here')
-    const { data: listener, error: deleteError } = await supabase
+    const { error: deleteError } = await supabase
         .from( 'users' )
         .delete()
         .eq( 'user_id', listenerId )
@@ -63,18 +63,42 @@ async function deleteMetaDataUser( supabase, listenerId ) {
         return new Response( JSON.stringify( { error: 'Error deleting data' } ),
         { status: 500, headers: { 'Content-type': 'application/json' } } );
     }
-    console.log('here')
+    console.log('Success account deleted')
     return 1;
 }
 
+async function getItemFromBuckets ( supabase, artistId ) {
+    // retrieve an array of objects linke from the storage
+    const { data: arrayLink, error: fetchError } = await supabase
+        .from ( 'songs' )
+        .select( 'song_file_path' )
+        .eq( 'artist_id', artistId)
+    if ( fetchError ){
+        console.error( 'supabase error:', fetchError );
+        return new Response( JSON.stringify( { error: 'Error fetching Links' } ),
+        { status: 500, headers: { 'Content-type': 'application/json' } } );
+    }
+    return arrayLink
+}
+
 // delete the listener metadata from the DB
-async function deleteStorageItem( supabase, artistId ) {
+async function deleteStorageItem( supabase, artistId, linksToDelete ) {
 
     //todo
     //https://supabase.com/docs/reference/javascript/storage-from-remove
-
     // Loop through all the items with the artist_id and delete them
-    console.log('done')
+    let link;
+    for ( link of linksToDelete ) {
+        const { error: deleteError } = await supabase 
+        .storage
+        .from( 'music' )
+        .remove([link.song_file_path])
+        if ( deleteError ) {
+            console.error( 'Delete error:', deleteError );
+            return new Response( JSON.stringify({ error: 'error deleting'}),
+            {status: 400, headers: { 'Content-type': 'application/json'} } );
+        } 
+    }
     return 1;
 }
 
@@ -107,6 +131,7 @@ Deno.serve( async (request) => {
 curl --request POST 'http://localhost:54321/functions/v1/deleteAccount' \
   --header "Authorization: Bearer "${SUPABASE_ANON_KEY}\
   --header "Content-Type: application/json" \
-  --data '{"user_id": "6f93aba5-275c-4088-98d3-e6928f6c4ca7"}'
+  --data '{"user_id": "fd5313a8-e1e4-4173-9858-5ad734cd56be"}'
 
 */
+// fd5313a8-e1e4-4173-9858-5ad734cd56be
