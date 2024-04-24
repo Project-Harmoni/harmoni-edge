@@ -34,12 +34,13 @@ async function deleteAccountUser( request: Request) {
         console.log(userType);
         if ( userType[0].user_type === 'listener') {
             console.log('going here')
-            deleteMetaDataUser( supabase, userId )
+            // deleteMetaDataUser( supabase, userId )
         } else if ( userType[0].user_type === 'artist') {
             // todo
             const linksDelete = await getItemFromBuckets( supabase, userId );
-            deleteStorageItem( supabase, userId, linksDelete );
-            deleteMetaDataUser( supabase, userId )
+            const itemsDeleted = await deleteStorageItem( supabase, userId, linksDelete );
+            console.log(itemsDeleted);
+            // deleteMetaDataUser( supabase, userId )
         } else {
             // todo throw error
         }
@@ -53,7 +54,6 @@ async function deleteAccountUser( request: Request) {
 // delete the listener metadata from the DB
 async function deleteMetaDataUser( supabase, listenerId ) {
 
-    console.log('here')
     const { error: deleteError } = await supabase
         .from( 'users' )
         .delete()
@@ -83,12 +83,13 @@ async function getItemFromBuckets ( supabase, artistId ) {
 
 // delete the listener metadata from the DB
 async function deleteStorageItem( supabase, artistId, linksToDelete ) {
-
     //todo
     //https://supabase.com/docs/reference/javascript/storage-from-remove
     // Loop through all the items with the artist_id and delete them
     let link;
-    const testLink = "" // link to the file
+    console.log("trying to delete");
+    const testLink = "test.mp3" // link to the file
+    // just trying to delete a mp3 file named 'test.mp3' in the music bucket
     const { error: deleteError } = await supabase
         .storage
         .from('music')
@@ -142,6 +143,17 @@ Deno.serve( async (request) => {
         curl --request POST 'http://localhost:54321/functions/v1/deleteAccount' \
         --header "Authorization: Bearer "${SUPABASE_ANON_KEY}\
         --header "Content-Type: application/json" \
-        --data '{"user_id": "440716ff-b9ea-4931-a623-ab8427a8ffa9"}'
+        --data '{"user_id": "e54743d6-6f95-407e-a781-61b57ef2cf8d"}'
     */
+/* To invoke locally:
+
+  1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
+  2. Make an HTTP request:
+        curl --request POST 'https://jfnwxnzeswkzvsudcgew.supabase.co/functions/v1/deleteAccount' \
+        --header "Authorization: Bearer "${SUPABASE_ANON_KEY}\
+        --header "Content-Type: application/json" \
+        --data '{"user_id": "5dc376aa-3bca-4006-87be-3378d4703c70"}'
+    */
+        
+        
 // 67f93f97-47c2-4a89-86a4-d02a48349248
