@@ -41,16 +41,33 @@ async function playSong(request) {
     { global: { headers: { Authorization: request.headers.get('Authorization')! } } }
   )
 
+  // get user type
+  const {data: userTypeData, error: userTypeError} = await supabase
+  .from('users')
+  .select('user_type')
+  .eq('user_id', userId)
+  .single()
+
+  let table
+  let userType
+  if(userTypeData.user_type.toLowerCase() === "listener"){
+    table = "listeners"
+    userType = "listener_id"
+  }else{
+    table = "artists"
+    userType = "artist_id"
+  }
+
   // check listener balance and throw error if too low and create listener wallet if not
   const {data: listenerData, error: listenerError} = await supabase
-  .from('listeners')
+  .from(table)
   .select('tokens, listener: users!inner(private_key), table: users!inner(user_type)')
-  .eq('listener_id', userId)
+  .eq(userType, userId)
   .single()
 
   if (listenerError) {
-    console.error('Supabase error:', error);
-    return new Response(JSON.stringify({ error: 'Error fetching song data' }), 
+    console.error('Supabase error:', listenerError);
+    return new Response(JSON.stringify({ error: 'Error fetching listener data' }), 
     { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 
@@ -92,61 +109,45 @@ async function playSong(request) {
 
   if(!data[0].is_free){
     // create artist wallet
+    let bonusWei = ethers.utils.parseUnits('0', 18);
     const artistWallet = artistTransferData.artist.public_key
-    const songFee = 1
+    const songFee = ethers.utils.parseUnits('1', 18)
     let transferTokens = songFee
 
     // increase artist tokens
-    let artistTokens = artistTransferData.tokens + songFee
+    let artistTokens = artistTransferData.tokens + 1
     
-    //if < 10,000, transfer bonus token from master wallet
-    if(artistTransferData.total_artist_streams <= 10000){
-      artistTokens += songFee
-      transferTokens += songFee
+    artistTokens -= 0.05
+
+    if (artistTransferData.total_artist_streams <= 10000 && userType === "listener_id") {
+      bonusWei = songFee
     }
 
     // transfer .05 tokens to masterWallet from listener wallet
-    const masterWalletTokens = 0.05
-    let amountInWei = ethers.utils.parseUnits(masterWalletTokens.toString(), 18)
-
     try {
+        const masterWalletFractionWei = ethers.utils.parseUnits('0.05', 18)
         const wallet = '0x7a81233d84790Fb2BA8c5BF597eD5DCab46D842a'
-        const transaction = await contractWithSigner.transfer(wallet, amountInWei)
+        const transaction = await contractWithSigner.transfer(wallet, masterWalletFractionWei)
         //const receipt = await transaction.wait()
-        console.log('Transfer successful', transaction)
-    } catch (transferError) {
-        console.error('Transfer error:', transferError)
+        console.log('Partial Transfer successful', transaction)
+
+        let balanceWei = transferTokens.sub(masterWalletFractionWei)
+
+        await contractWithSigner.transfer(artistWallet, balanceWei)
+        console.log("Transfer from listener wallet to artist wallet successful")
+
+        if(bonusWei.gt(0)){
+          artistTokens += 1
+          const bonusWei = ethers.utils.parseUnits('1', 18)
+          const masterWithSigner = contractWithSigner.connect(masterWallet)
+          await masterWithSigner.transfer(artistWallet, bonusWei)
+          console.log("Bonus transfer from master to artist wallet successful")
+        }
+    } catch (error) {
+        console.error('Transfer error:', error)
         //throw new Error("Failed to transfer tokens")  // Stop execution and handle the error appropriately
     }
-    // Transfer song fee to artist
-    let listenerTokens = songFee - masterWalletTokens
-    artistTokens = artistTokens - masterWalletTokens
-    transferTokens = transferTokens - listenerTokens - masterWalletTokens
-    console.log("Transfer Tokens ", transferTokens)
-    console.log("Listener Tokens ", listenerTokens)
-    amountInWei = ethers.utils.parseUnits(listenerTokens.toString(), 18)
-
-    try {
-        console.log("ArtistWallet: ", artistWallet)
-        const transaction = await contractWithSigner.transfer(artistWallet, amountInWei);
-        console.log('Transfer successful', transaction);
-    } catch (transferError) {
-        console.error('Transfer error:', transferError);
-        //throw new Error("Failed to transfer tokens")  // Stop execution and handle the error appropriately
-    }
-
-    if(transferTokens > 0){
-      amountInWei = ethers.utils.parseUnits(transferTokens.toString(), 18)
-      const masterWithSigner = tokenContract.connect(masterWallet)
-      try {
-        const transaction = await masterWithSigner.transfer(artistWallet, amountInWei);
-        console.log('Transfer successful', transaction);
-      } catch (transferError) {
-        console.error('Transfer error:', transferError);
-        //throw new Error("Failed to transfer tokens")  // Stop execution and handle the error appropriately
-      }
-    }
-
+   
     // update with new amount 
     const {error: updateArtistError} = await supabase
       .from('artists')
@@ -165,27 +166,21 @@ async function playSong(request) {
       console.log("Updated artist streams")
     
     // decrease listener tokens
-    let table
-    if(listenerData.table.user_type.toLowerCase() === "listener"){
-      table = "listeners"
-    }else{
-      table = "artists"
-    }
     console.log("Table: ",table)
     let {data: listenerDataUpdate, error: listenerErrorUpdate} = await supabase
           .from(table)
           .select('tokens')
-          .eq('listener_id', userId)
+          .eq(userType, userId)
           .single()
     console.log(listenerDataUpdate)
 
-    const newTokens = listenerData.tokens - 1
+    const newTokens = listenerDataUpdate.tokens - 1
 
     // update with new amount
     const {error: updateError} = await supabase
     .from(table)
     .update({tokens: newTokens})
-    .eq('listener_id', userId)
+    .eq(userType, userId)
   }
 
   // increment song count
