@@ -27,7 +27,7 @@ async function playSong(request) {
 
   const songId = body.songId
   if (!songId){
-      return new Response(JSON.stringify({error: 'Missing sonId'}), {status: 400, headers: {'Content-Type': 'application/json'}})
+      return new Response(JSON.stringify({error: 'Missing songId'}), {status: 400, headers: {'Content-Type': 'application/json'}})
   }
 
   const userId = body.userId
@@ -166,7 +166,7 @@ async function playSong(request) {
     
     // decrease listener tokens
     let table
-    if(listenerData.table.user_type === "listener"){
+    if(listenerData.table.user_type.toLowerCase() === "listener"){
       table = "listeners"
     }else{
       table = "artists"
@@ -210,6 +210,14 @@ async function playSong(request) {
         .eq('listener_id', userId)
         .single()
 
+  // add a new listener stream if none exists
+  if (!streamData || streamData.length === 0) {
+    const {data: streamData, error: streamDataError} = await supabase
+        .from('listener_song_stream')
+        .insert([
+          { listener_id: userId, song_id: songId, counter_streams: 1 }
+      ]);
+  }else{
 
     const newSongStream = streamData.counter_streams + 1
 
@@ -217,8 +225,7 @@ async function playSong(request) {
     .from('listener_song_stream')
     .update({counter_streams: newSongStream})
     .eq('listener_id', userId)
-
-    // TO DO: check for payout if song not free
+  }
 
     console.log("Payout function called!")
     const functionName = 'songPayout'; 
@@ -238,7 +245,7 @@ async function playSong(request) {
     } catch (error) {
     console.error('Exception when calling function:', error);
     }
-    return new Response(JSON.stringify({ data }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ data: "Song Payment Processed" }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   
 }
 

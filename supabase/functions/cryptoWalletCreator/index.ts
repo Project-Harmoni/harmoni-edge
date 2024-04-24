@@ -74,7 +74,6 @@
                         // if user is a listener give them 20 bonus token
                         await transferTokens(contractWithSigner ,address, 25)
                         console.log("Transfering Matic...")
-                        await transferMatic(alchemyProvider, transferWallet, address, '.1')
                         //update bonus tokens in the database
                         await supabase
                             const { data: userData, error: error } = await supabase
@@ -89,7 +88,7 @@
                 } catch (error) {
                     return new Response(JSON.stringify({error: 'Error adding free tokens'}), {status: 404})
                 }
-           
+            await transferMatic(alchemyProvider, transferWallet, address, '.1')
             await updateUserKeys(supabase, userId, privateKey, address)
             console.log('User keys updated successfully:')
 
