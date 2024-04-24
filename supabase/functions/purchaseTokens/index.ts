@@ -49,7 +49,7 @@ async function purchaseTokens(request) {
     try {
         const { data, error } = await supabase
             .from('users')
-            .select('public_key')   
+            .select('public_key, user_type')   
             .eq('user_id', userId)
 
         if (error) {
@@ -62,11 +62,21 @@ async function purchaseTokens(request) {
             return new Response(JSON.stringify({ message: 'No records found for the specified user ID' }), 
             { status: 404, headers: { 'Content-Type': 'application/json' } });
         }
+        console.log("Data: ", data)
+        let table
+        let userType
+        if(data[0].user_type.toLowerCase() === "listener"){
+            table = "listeners"
+            userType = "listener_id"
+        }else{
+        table = "artists"
+        userType = "artist_id"
+        }
 
         const { data: listenerData, error: listenerError } = await supabase
-            .from('listeners')
+            .from(table)
             .select('tokens')   
-            .eq('listener_id', userId)
+            .eq(userType, userId)
 
         if (listenerError) {
             console.error('Supabase error:', listenerError);
@@ -82,9 +92,9 @@ async function purchaseTokens(request) {
         const newTokens = listenerData[0].tokens + parseInt(tokenQuantity)
 
         const {error: updateError} = await supabase
-            .from('listeners')
+            .from(table)
             .update({tokens: newTokens})
-            .eq("listener_id", userId)
+            .eq(userType, userId)
         
         if (updateError){
             console.error('Supabase error:', updateError);
@@ -99,7 +109,7 @@ async function purchaseTokens(request) {
             { status: 500, headers: { 'Content-Type': 'application/json' } });
         }
 
-        return new Response(JSON.stringify({ data, listenerData}), { status: 200, headers: { 'Content-Type': 'application/json' } })
+        return new Response(JSON.stringify({ data: "Purchase processed"}), { status: 200, headers: { 'Content-Type': 'application/json' } })
 
     } catch (error) {
         console.error('Error in processing:', error);
