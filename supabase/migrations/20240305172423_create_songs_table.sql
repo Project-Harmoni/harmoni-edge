@@ -3,7 +3,7 @@ create table
 songs(
     song_id bigint primary key generated always as identity,
     album_id bigint references albums,
-    artist_id uuid references artists,
+    artist_id uuid references artists on delete cascade,
     cover_image_path text,
     is_explicit boolean default false,
     payout_threshold int default 10 check (payout_threshold >= 10),

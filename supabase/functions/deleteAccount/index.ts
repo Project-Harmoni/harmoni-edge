@@ -88,17 +88,28 @@ async function deleteStorageItem( supabase, artistId, linksToDelete ) {
     //https://supabase.com/docs/reference/javascript/storage-from-remove
     // Loop through all the items with the artist_id and delete them
     let link;
-    for ( link of linksToDelete ) {
-        const { error: deleteError } = await supabase 
+    const testLink = "" // link to the file
+    const { error: deleteError } = await supabase
         .storage
-        .from( 'music' )
-        .remove([link.song_file_path])
-        if ( deleteError ) {
-            console.error( 'Delete error:', deleteError );
-            return new Response( JSON.stringify({ error: 'error deleting'}),
-            {status: 400, headers: { 'Content-type': 'application/json'} } );
-        } 
-    }
+        .from('music')
+        .remove([testLink])
+    if ( deleteError){
+                console.error( 'Delete error:', deleteError );
+                return new Response( JSON.stringify({ error: 'error deleting'}),
+                {status: 400, headers: { 'Content-type': 'application/json'} } );
+            } 
+    // loop to delete all files linked to the artist id
+    // for ( link of linksToDelete ) {
+    //     const { error: deleteError } = await supabase 
+    //     .storage
+    //     .from( 'music' )
+    //     .remove([link.song_file_path])
+    //     if ( deleteError ) {
+    //         console.error( 'Delete error:', deleteError );
+    //         return new Response( JSON.stringify({ error: 'error deleting'}),
+    //         {status: 400, headers: { 'Content-type': 'application/json'} } );
+    //     } 
+    // }
     return 1;
 }
 
@@ -128,10 +139,9 @@ Deno.serve( async (request) => {
 
   1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
   2. Make an HTTP request:
-curl --request POST 'http://localhost:54321/functions/v1/deleteAccount' \
-  --header "Authorization: Bearer "${SUPABASE_ANON_KEY}\
-  --header "Content-Type: application/json" \
-  --data '{"user_id": "fd5313a8-e1e4-4173-9858-5ad734cd56be"}'
-
-*/
-// fd5313a8-e1e4-4173-9858-5ad734cd56be
+        curl --request POST 'http://localhost:54321/functions/v1/deleteAccount' \
+        --header "Authorization: Bearer "${SUPABASE_ANON_KEY}\
+        --header "Content-Type: application/json" \
+        --data '{"user_id": "440716ff-b9ea-4931-a623-ab8427a8ffa9"}'
+    */
+// 67f93f97-47c2-4a89-86a4-d02a48349248
