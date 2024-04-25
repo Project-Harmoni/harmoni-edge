@@ -1,13 +1,26 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js'
 import { ethers } from 'https://cdn.skypack.dev/ethers@5.6.8'
 
-
+/**
+ * Handles the logic for playing a song which involves validating user and song data,
+ * processing payments, and updating stream counts. This function operates within a Deno environment
+ * and utilizes both the Supabase database and the Ethereum blockchain via ethers.js.
+ * It ensures the song play is properly logged, the artist is compensated, and the user's
+ * token balance is updated.
+ * 
+ * @param {Request} request - The HTTP request object that includes method, headers, and body.
+ * @returns {Promise<Response>} - A promise that resolves to an HTTP response object.
+ */
 async function playSong(request) {
 
+  // Establishes a connection to the Ethereum blockchain using an Alchemy API endpoint.
   const alchemyEndpoint = Deno.env.get('ALCHEMY_URL')
   const alchemyProvider = new ethers.providers.JsonRpcProvider(alchemyEndpoint)
+
+  // Retrieves the token contract address and ABI from environment variables.
   const tokenContractAddress = Deno.env.get('TOKEN_CONTRACT_ADDRESS')
-  const tokenAbi = ["function balanceOf(address owner) view returns (uint256)", "function transfer(address to, uint value) returns (bool)"]
+  const tokenAbi = ["function balanceOf(address owner) view returns (uint256)", 
+  "function transfer(address to, uint value) returns (bool)"]
   const tokenContract = new ethers.Contract(tokenContractAddress, tokenAbi, alchemyProvider)
   const masterWallet = new ethers.Wallet(Deno.env.get('MASTER_KEY'), alchemyProvider)
   
@@ -18,7 +31,6 @@ async function playSong(request) {
 
   let body
   try{
-      // Parse the JSON body of the request
       body = await request.json()
   } catch(error){
       console.error('Error parsing request body: ', error)
@@ -41,7 +53,7 @@ async function playSong(request) {
     { global: { headers: { Authorization: request.headers.get('Authorization')! } } }
   )
 
-  // get user type
+  // Retrieves the user type to determine whether the user is a listener or an artist.
   const {data: userTypeData, error: userTypeError} = await supabase
   .from('users')
   .select('user_type')
@@ -58,7 +70,7 @@ async function playSong(request) {
     userType = "artist_id"
   }
 
-  // check listener balance and throw error if too low and create listener wallet if not
+  // Fetches listener or artist data to check the token balance and manage wallet interactions.
   const {data: listenerData, error: listenerError} = await supabase
   .from(table)
   .select('tokens, listener: users!inner(private_key), table: users!inner(user_type)')
@@ -75,10 +87,12 @@ async function playSong(request) {
     return new Response(JSON.stringify({ error: 'Insufficient balance' }), 
       { status: 404, headers: { 'Content-Type': 'application/json' } });
   }
+
+  // Creates a wallet instance for the listener using their private key and the blockchain provider.
   const listenerWallet = new ethers.Wallet(listenerData.listener.private_key, alchemyProvider)
   const contractWithSigner = tokenContract.connect(listenerWallet)
   
-
+  // Fetches song details to manage stream counts and token transfers if the song is not free.
   const { data, error } = await supabase
   .from('songs')
   .select('stream_count, is_free, artist_id, artist_payout_percentage, payout_threshold')   
@@ -102,13 +116,13 @@ async function playSong(request) {
           .single()
   
   if (artistTransferError) {
-    console.error('Supabase error:', error);
+    console.error('Supabase error:', artistTransferError);
     return new Response(JSON.stringify({ error: 'Error fetching artistTransfer data' }), 
     { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 
   if(!data[0].is_free){
-    // create artist wallet
+    // Calculate the fee to transfer from the listener to the artist and the master wallet.
     let bonusWei = ethers.utils.parseUnits('0', 18);
     const artistWallet = artistTransferData.artist.public_key
     const songFee = ethers.utils.parseUnits('1', 18)
@@ -128,7 +142,6 @@ async function playSong(request) {
         const masterWalletFractionWei = ethers.utils.parseUnits('0.05', 18)
         const wallet = '0x7a81233d84790Fb2BA8c5BF597eD5DCab46D842a'
         const transaction = await contractWithSigner.transfer(wallet, masterWalletFractionWei)
-        //const receipt = await transaction.wait()
         console.log('Partial Transfer successful', transaction)
 
         let balanceWei = transferTokens.sub(masterWalletFractionWei)
@@ -145,7 +158,6 @@ async function playSong(request) {
         }
     } catch (error) {
         console.error('Transfer error:', error)
-        //throw new Error("Failed to transfer tokens")  // Stop execution and handle the error appropriately
     }
    
     // update with new amount 
