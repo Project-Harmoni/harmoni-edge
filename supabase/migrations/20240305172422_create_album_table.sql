@@ -5,7 +5,7 @@ create table
 albums (
 	album_id bigint primary key generated always as identity,
 	album_name text,
-	artist_id uuid references artists,
+	artist_id uuid references artists on delete cascade,
 	cover_path text,
 	genre text, -- according to discussion maybe linked to tag system later, so should be just a text for artists?
 	year_released Date,
