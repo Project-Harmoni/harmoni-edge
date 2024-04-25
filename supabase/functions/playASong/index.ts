@@ -2,6 +2,25 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js'
 import { ethers } from 'https://cdn.skypack.dev/ethers@5.6.8'
 
 /**
+ * The `playSong` function is designed to manage song playback requests in a music streaming platform.
+ * It integrates with the Supabase database for user and song data management, and leverages the Ethereum blockchain
+ * via ethers.js for token-based transactions. This function ensures that each song play is authenticated,
+ * the appropriate tokens are transferred between user wallets, and all relevant data is updated in the database.
+ * It handles errors robustly and ensures that only valid POST requests are processed. This function is intended
+ * to run in a Deno environment, utilizing environment variables for secure and dynamic configuration.
+ *
+ * Usage:
+ * - Validates HTTP request method and content.
+ * - Parses and checks request body for necessary parameters.
+ * - Establishes connections to blockchain and database services.
+ * - Verifies user balances and permissions.
+ * - Conducts token transfers and updates user balances.
+ * - Logs song play data and updates streaming statistics.
+ *
+ * This function is triggered by HTTP POST requests made to the Deno server it runs on.
+ */
+
+/**
  * Handles the logic for playing a song which involves validating user and song data,
  * processing payments, and updating stream counts. This function operates within a Deno environment
  * and utilizes both the Supabase database and the Ethereum blockchain via ethers.js.
