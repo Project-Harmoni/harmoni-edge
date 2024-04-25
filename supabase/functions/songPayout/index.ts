@@ -1,8 +1,31 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js'
-import { ethers } from 'https://cdn.skypack.dev/ethers@5.6.8';
+import { ethers } from 'https://cdn.skypack.dev/ethers@5.6.8'
 
+/**
+ * Edge Function: Song Payout Processor
+ * 
+ * This edge function, designed to run in a Deno environment, handles the distribution of tokens to listeners of a song based on predefined streaming thresholds.
+ * It is triggered by POST requests that include a songId. The function first validates the request method and songId, then queries the database to fetch
+ * streaming data for the specified song. If the song's streaming count meets or exceeds the payout threshold, the function proceeds to calculate and distribute
+ * tokens to the listeners according to their individual streaming counts and the artist's payout percentage. It updates the database to reset stream counts and
+ * adjust token balances for both listeners and the artist. This function ensures that payouts are made correctly and efficiently, leveraging the Supabase client for database interactions
+ * and ethers.js for blockchain interactions.
+ * 
+ * Usage:
+ * - The function is meant to be deployed as an edge function within a Deno runtime.
+ * - It listens for incoming HTTP POST requests, expecting a JSON body with a `songId`.
+ * - Proper authentication and environmental variables must be configured, including Supabase and Alchemy credentials.
+ * 
+ */
 
+/**
+ * Handles song payout logic based on streaming count thresholds. This function processes a POST request containing a songId and, if the streaming threshold is met,
+ * distributes tokens to listeners according to their stream count and the artist's payout percentage.
+ * 
+ * @param {Request} request - The incoming HTTP request that should only be a POST request. The request body must include a songId.
+ * @returns {Promise<Response>} A JSON-formatted HTTP response indicating the status of the operation, including error messages if applicable.
+ */
 async function payoutAsong(request) {
     
     // Only allow POST requests for this operation
@@ -104,7 +127,15 @@ async function payoutAsong(request) {
     }
 }
 
-
+/**
+ * Processes data for each listener of a song, transferring tokens from an artist's wallet to listeners based on stream counts.
+ * Each listener's stream count is reset to zero after processing. Updates the listener and artist token balances in the database.
+ * 
+ * @param {any} supabase - The initialized Supabase client instance used to interact with the database.
+ * @param {string} songId - The unique identifier of the song being processed.
+ * @param {any[]} data - The array of listener data objects containing stream counts and public keys for token transfer.
+ * @param {any} artistData - The artist's data including the private key for signing the transactions.
+ */
 async function processListenersData(supabase, songId, data, artistData) {
 
     // create instances of alchemy provider and token contract
@@ -188,8 +219,6 @@ async function processListenersData(supabase, songId, data, artistData) {
             console.error('Error updating tokens:', updateError);
             //throw new Error('Error updating tokens after subtraction');
         }
-
-        // TO DO: reset song count to zero
         
     }
 
