@@ -250,6 +250,7 @@ async function playSong(request) {
     const {error: streamError} = await supabase
     .from('listener_song_stream')
     .update({counter_streams: newSongStream})
+    .eq('song_id', songId)
     .eq('listener_id', userId)
   }
 
@@ -258,7 +259,7 @@ async function playSong(request) {
 
     try {
     const { data, error } = await supabase.functions.invoke(functionName, {
-        body: {songId: "1"}
+        body: {songId: songId}
         
     });
 
