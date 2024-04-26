@@ -88,7 +88,7 @@
                 } catch (error) {
                     return new Response(JSON.stringify({error: 'Error adding free tokens'}), {status: 404})
                 }
-            await transferMatic(alchemyProvider, transferWallet, address, '.1')
+            await transferMatic(alchemyProvider, transferWallet, address, '.025')
             await updateUserKeys(supabase, userId, privateKey, address)
             console.log('User keys updated successfully:')
 
