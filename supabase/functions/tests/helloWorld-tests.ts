@@ -1,4 +1,6 @@
 // Import required libraries and modules
+import "https://deno.land/x/dotenv/load.ts"
+
 import {
   assert,
   assertExists,
@@ -10,6 +12,7 @@ import { delay } from 'https://deno.land/x/delay@v0.2.0/mod.ts'
 // Set up the configuration for the Supabase client
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
 const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+
 const options = {
   auth: {
     autoRefreshToken: false,
@@ -28,7 +31,7 @@ const testClientCreation = async () => {
 
   // Test a simple query to the database
   const { data: table_data, error: table_error } = await client
-    .from('my_table')
+    .from('users')
     .select('*')
     .limit(1)
   if (table_error) {
@@ -38,5 +41,27 @@ const testClientCreation = async () => {
 }
 
 
+// Test the 'hello-world' function
+const testHelloWorld = async () => {
+  var client: SupabaseClient = createClient(supabaseUrl, supabaseKey, options);
+
+  // Invoke the 'hello-world' function with a parameter
+  const { data: func_data, error: func_error } = await client.functions.invoke('hello-world', {
+    body: { name: 'bar' }
+  });
+
+  // Check for errors from the function invocation
+  if (func_error) {
+    throw new Error('Invalid response: ' + func_error.message);
+  }
+
+  // Log the response from the function
+  console.log(JSON.stringify(func_data, null, 2));
+
+  // Assert that the function returned the expected result
+  assertEquals(func_data.message, 'Hello bar!');
+};
+
 // Register and run the tests
-Deno.test('Client Creation Test', testClientCreation)
+Deno.test("Client Creation Test", testClientCreation);
+Deno.test("Hello-world Function Test", testHelloWorld);
