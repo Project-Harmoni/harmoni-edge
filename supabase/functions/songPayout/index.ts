@@ -90,7 +90,7 @@ async function payoutAsong(request) {
             // get artist id for song
             const { data: artistData, error: artistError } = await supabase
                 .from('songs')
-                .select('artist_id, artist: artists!inner(users!inner(private_key)), artist_payout_percentage')   
+                .select('artist_id, payout_type, artist: artists!inner(users!inner(private_key)), artist_payout_percentage')   
                 .eq('song_id', songId)
             
             if (artistError) {
@@ -103,8 +103,8 @@ async function payoutAsong(request) {
                 return new Response(JSON.stringify({ message: 'No artist found for the specified song ID' }), 
                 { status: 404, headers: { 'Content-Type': 'application/json' } });
             }
-            
-            processListenersData(supabase, songId, data, artistData)
+            console.log("Process data: ", artistData)
+            processListenersData(supabase, songId, data, artistData, songData)
 
             // set song counter to 0
             const {error: songCountUpdateError} = await supabase
@@ -115,7 +115,7 @@ async function payoutAsong(request) {
                 console.error('Error updating tokens:', updateError);
             }
 
-            return new Response(JSON.stringify({ data, artistData }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            return new Response(JSON.stringify({ data: 'Song payout completed' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
         } catch (error) {
             console.error('Error in processing:', error);
             return new Response(JSON.stringify({ error: 'Internal Server Error' }), 
@@ -136,7 +136,7 @@ async function payoutAsong(request) {
  * @param {any[]} data - The array of listener data objects containing stream counts and public keys for token transfer.
  * @param {any} artistData - The artist's data including the private key for signing the transactions.
  */
-async function processListenersData(supabase, songId, data, artistData) {
+async function processListenersData(supabase, songId, data, artistData, songData) {
 
     // create instances of alchemy provider and token contract
     const alchemyEndpoint = Deno.env.get('ALCHEMY_URL')
@@ -149,78 +149,146 @@ async function processListenersData(supabase, songId, data, artistData) {
     const privateKey = artistData[0].artist.users.private_key
     const transferWallet = new ethers.Wallet(privateKey, alchemyProvider)
     const contractWithSigner = tokenContract.connect(transferWallet)
-    console.log(data)
-    for(let i=0; i < data.length; i++){
-        const listener = data[i].listener_id
-        // create receiver wallet
-        const receiverWallet = data[i].listener.public_key
-        
-        //send tokens to listener wallet
-        const tokenAmount = data[i].counter_streams * (artistData[0].artist_payout_percentage/100)
-        console.log(data[i].counter_streams)
-        console.log(tokenAmount)
-        const amountInWei = ethers.utils.parseUnits(tokenAmount.toString(), 18)
 
+    if (artistData[0].payout_type.toLowerCase() === 'jackpot'){
+        console.log("This is a jackpot")
+        const randomIndex = Math.floor(Math.random() * data.length)
+        const jackpotWinner = data[randomIndex].listener_id
+        console.log("Winner: ", jackpotWinner)
+        const jackpotPublicKey = data[randomIndex].listener.public_key
+        const jackpot = songData[0].stream_count * (artistData[0].artist_payout_percentage/100)
+        console.log(jackpotPublicKey, jackpot)
+        const jackpotWei = ethers.utils.parseUnits(jackpot.toString(), 18)
+        
         try {
-            const transaction = await contractWithSigner.transfer(receiverWallet, amountInWei);
+            const transaction = await contractWithSigner.transfer(jackpotPublicKey, jackpotWei);
             console.log('Transfer successful', transaction);
         } catch (transferError) {
             console.error('Transfer error:', transferError);
             return;  // Stop execution and handle the error appropriately
         }
+
         //set count_stream to 0
         const { data: streamData, error: countError } = await supabase
         .from('listener_song_stream')
         .update({ counter_streams: 0 })
         .eq('song_id', songId)
-        .eq('listener_id', listener)
         if (countError) {
             console.error('Error resetting counter_streams:', countError);
         }
-        console.log(`Successfully reset counter_streams: ${listener}`);
-        // get current balance of listener tokens
-        let {data: listenerData, error: listenerError} = await supabase
-        .from('listeners')
-        .select('tokens')
-        .eq('listener_id', listener)
-        .single()
-        if (listenerError) {
-            console.error('Operational error:', error);
-            //throw new Error('Error subtracting tokens due to operational issue');
-        }   
-        const newTokens = listenerData.tokens + tokenAmount
-        // update with new amount
-        const {error: updateError} = await supabase
-        .from('listeners')
-        .update({tokens: newTokens})
-        .eq('listener_id', listener)
-        if (updateError) {
-            console.error('Error updating tokens:', updateError);
-            //throw new Error('Error updating tokens after subtraction');
+            // get current balance of listener tokens
+            let {data: listenerData, error: listenerError} = await supabase
+            .from('listeners')
+            .select('tokens')
+            .eq('listener_id', jackpotWinner)
+            .single()
+            if (listenerError) {
+                console.error('Operational error:', error);
+                //throw new Error('Error subtracting tokens due to operational issue');
+            }   
+            const newTokens = listenerData.tokens + jackpot
+            // update with new amount
+            const {error: updateError} = await supabase
+            .from('listeners')
+            .update({tokens: newTokens})
+            .eq('listener_id', jackpotWinner)
+            if (updateError) {
+                console.error('Error updating tokens:', updateError);
+                //throw new Error('Error updating tokens after subtraction');
+            }
+
+            // get current balance of artist tokens
+            let {data: artistsData, error: artistError} = await supabase
+            .from('artists')
+            .select('tokens')
+            .eq('artist_id', artistData[0].artist_id)
+            .single()
+            if (artistError) {
+                console.error('Operational error:', error);
+                //throw new Error('Error subtracting tokens due to operational issue');
+            }   
+            const artistTokens = artistsData.tokens - jackpot
+            // update with new amount
+            const {error: artistUpdateError} = await supabase
+            .from('artists')
+            .update({tokens: artistTokens})
+            .eq('artist_id', artistData[0].artist_id)
+            if (artistUpdateError) {
+                console.error('Error updating tokens:', updateError);
+                //throw new Error('Error updating tokens after subtraction');
+            }
+    }else{
+    
+        for(let i=0; i < data.length; i++){
+            const listener = data[i].listener_id
+            // create receiver wallet
+            const receiverWallet = data[i].listener.public_key
+            
+            //send tokens to listener wallet
+            const tokenAmount = data[i].counter_streams * (artistData[0].artist_payout_percentage/100)
+            const amountInWei = ethers.utils.parseUnits(tokenAmount.toString(), 18)
+
+            try {
+                const transaction = await contractWithSigner.transfer(receiverWallet, amountInWei);
+                console.log('Transfer successful', transaction);
+            } catch (transferError) {
+                console.error('Transfer error:', transferError);
+                return;  // Stop execution and handle the error appropriately
+            }
+            //set count_stream to 0
+            const { data: streamData, error: countError } = await supabase
+            .from('listener_song_stream')
+            .update({ counter_streams: 0 })
+            .eq('song_id', songId)
+            .eq('listener_id', listener)
+            if (countError) {
+                console.error('Error resetting counter_streams:', countError);
+            }
+            console.log(`Successfully reset counter_streams: ${listener}`);
+            // get current balance of listener tokens
+            let {data: listenerData, error: listenerError} = await supabase
+            .from('listeners')
+            .select('tokens')
+            .eq('listener_id', listener)
+            .single()
+            if (listenerError) {
+                console.error('Operational error:', error);
+                //throw new Error('Error subtracting tokens due to operational issue');
+            }   
+            const newTokens = listenerData.tokens + tokenAmount
+            // update with new amount
+            const {error: updateError} = await supabase
+            .from('listeners')
+            .update({tokens: newTokens})
+            .eq('listener_id', listener)
+            if (updateError) {
+                console.error('Error updating tokens:', updateError);
+                //throw new Error('Error updating tokens after subtraction');
+            }
+            console.log('Tokens increased successfully for userId:', listener);
+            // get current balance of artist tokens
+            let {data: artistsData, error: artistError} = await supabase
+            .from('artists')
+            .select('tokens')
+            .eq('artist_id', artistData[0].artist_id)
+            .single()
+            if (artistError) {
+                console.error('Operational error:', error);
+                //throw new Error('Error subtracting tokens due to operational issue');
+            }   
+            const artistTokens = artistsData.tokens - tokenAmount
+            // update with new amount
+            const {error: artistUpdateError} = await supabase
+            .from('artists')
+            .update({tokens: artistTokens})
+            .eq('artist_id', artistData[0].artist_id)
+            if (artistUpdateError) {
+                console.error('Error updating tokens:', updateError);
+                //throw new Error('Error updating tokens after subtraction');
+            }
+            
         }
-        console.log('Tokens increased successfully for userId:', listener);
-        // get current balance of artist tokens
-        let {data: artistsData, error: artistError} = await supabase
-        .from('artists')
-        .select('tokens')
-        .eq('artist_id', artistData[0].artist_id)
-        .single()
-        if (artistError) {
-            console.error('Operational error:', error);
-            //throw new Error('Error subtracting tokens due to operational issue');
-        }   
-        const artistTokens = artistsData.tokens - tokenAmount
-        // update with new amount
-        const {error: artistUpdateError} = await supabase
-        .from('artists')
-        .update({tokens: artistTokens})
-        .eq('artist_id', artistData[0].artist_id)
-        if (artistUpdateError) {
-            console.error('Error updating tokens:', updateError);
-            //throw new Error('Error updating tokens after subtraction');
-        }
-        
-    }
+    }   
 
     
 }
