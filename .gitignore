@@ -3,5 +3,6 @@ deno.lock
 
 # ignore .env files
 .env
+.env.swp
 
 
