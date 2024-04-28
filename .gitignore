@@ -1,2 +1,7 @@
+# ignore deno.lock file
+deno.lock
 
+# ignore .env files
 .env
+
+
