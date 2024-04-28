@@ -5,6 +5,10 @@
 
 -- helper function to check if listener id is valid
 -- return 1 as success
+-- input:
+--      - user_id uuid
+-- output:
+--      - integer ( 1 for success )
 -- listner can be an artist as well as a listener
 create or replace function public.check_listener_id (
     param_listener_id uuid
@@ -25,8 +29,10 @@ $$ language plpgsql;
 
 -- retrieve the most 30 tracks stream by this listener
 -- uses the listener id and stend back a list of tracks
--- create or replace functions public.top30_most_stream (
---     param_listener_id uuid
+-- input:
+--      - user_id uuid
+-- output:
+--      - table of songs id
 -- ) returns int
 create or replace function public.top30_most_stream (
     param_listener_id uuid

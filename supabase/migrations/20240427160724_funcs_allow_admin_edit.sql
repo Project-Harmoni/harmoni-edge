@@ -5,6 +5,10 @@
 
 -- helper function to check if user_id is valid and allowed to be an admin
 -- return 1 as success
+-- input:
+--      - user_id uuid
+-- output:
+--      - integer ( 1 for success )
 create or replace function public.check_admin_id (
     param_user_id uuid
 ) returns int
@@ -24,6 +28,11 @@ $$ language plpgsql;
 -- function to edit the name of flagged tracks
 -- take the song_id and the user_id who wants to delete 
 -- check that the user_id is an admin
+-- input:
+--      - track_id bigint
+--      - updated track name text
+-- output:
+--      - integer ( 1 for success )
 create or replace function public.edit_track (
     param_track_id bigint,
     param_track_name text
