@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "strict": false,  // Disable strict type checking
+    "noImplicitAny": false,  // Allow expressions and declarations with an implied 'any' type
+    "strictNullChecks": false,  // When type checking, take into account 'null' and 'undefined'
+    "strictFunctionTypes": false,  // Disable strict checking of function types
+    "strictBindCallApply": false,  // Allow looser types for bind, call, and apply
+    "strictPropertyInitialization": false  // Allow properties of a class to be initialized la
+  }
+}
