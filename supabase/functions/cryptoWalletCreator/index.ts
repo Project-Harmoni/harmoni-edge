@@ -39,14 +39,13 @@
         const alchemyProvider = new ethers.providers.JsonRpcProvider(alchemyEndpoint)
 
         const tokenContractAddress = Deno.env.get('TOKEN_CONTRACT_ADDRESS')
-
+        
         const tokenAbi = ["function balanceOf(address owner) view returns (uint256)", "function transfer(address to, uint value) returns (bool)"]
 
         // contract instance
         const tokenContract = new ethers.Contract(tokenContractAddress, tokenAbi, alchemyProvider)
         const transferWallet = new ethers.Wallet(Deno.env.get('MASTER_KEY'), alchemyProvider)
         const contractWithSigner = tokenContract.connect(transferWallet)
-
 
         const privateKey = ethers.utils.randomBytes(32)  // new wallet for user
 
@@ -180,15 +179,15 @@
      * @returns A promise that resolves when the transaction is sent.
      */
     async function transferTokens(contractWithSigner, toAddress, amount) {
-    
+        
+
         const amountInWei = ethers.utils.parseUnits(amount.toString(), 18)
     
         try{
             const transaction = await contractWithSigner.transfer(toAddress, amountInWei)
     
-            //await transaction.wait()
+           // await transaction.wait()
             console.log(`Tokens transfer initiated: ${amount} to ${toAddress}`)
-            //TO DO: add tokens to user as available
     
         }catch(error) {
             throw new Error('Transaction failed');      
@@ -207,6 +206,7 @@
     async function transferMatic(provider, transferWallet, recipientAddress, amount){
 
         const matic = ethers.utils.parseEther(amount);
+        console.log("Matic: ", matic)
         const gasPrice = await provider.getGasPrice();
         const increasedGasPrice = gasPrice.mul(200).div(100);
         
