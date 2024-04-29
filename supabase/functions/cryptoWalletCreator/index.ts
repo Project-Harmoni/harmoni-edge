@@ -74,7 +74,7 @@
                         await transferTokens(contractWithSigner ,address, 25)
                         console.log("Transfering Matic...")
                         //update bonus tokens in the database
-                        await supabase
+                        //await supabase
                             const { data: userData, error: error } = await supabase
                             .from('listeners')
                             .update({ tokens: 25 })
@@ -83,7 +83,12 @@
                                 console.error('Operational error fetching user:', fetchError);
                                 throw new Error('Error adding tokens due to operational issue');
                             }
-                    }                        
+                    } else {
+                        const { data: userData, error: error } = await supabase
+                            .from('artists')
+                            .update({ tokens: 0 })
+                            .eq('artist_id', userId);
+                    }                       
                 } catch (error) {
                     return new Response(JSON.stringify({error: 'Error adding free tokens'}), {status: 404})
                 }
