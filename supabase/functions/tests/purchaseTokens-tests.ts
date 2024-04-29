@@ -208,7 +208,8 @@ const testListenerPurchaseTokens = async () => {
         if(newTokenError){
             console.log('error accessing tokens')
         }
-        console.log("New token value: ", newTokenData.tokens)
+        let newTokens = newTokenData.tokens
+        console.log("New Tokens Balance: ", newTokens)
 
     const balance = await (tokenContract as any).balanceOf(publicKeyData.public_key);
     const balanceInTokens = ethers.utils.formatUnits(balance, 18)
@@ -216,7 +217,7 @@ const testListenerPurchaseTokens = async () => {
   
     // Assert that the function returned the expected result
     assertEquals(func_data.data, "Purchase processed");
-    assertEquals(newTokenData.tokens.toString(), balanceInTokens)
+    assertEquals(parseFloat(newTokenData.tokens), parseFloat(balanceInTokens))
   }
 
   Deno.test("Client Creation Test", testClientCreation);
