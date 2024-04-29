@@ -103,7 +103,7 @@ async function purchaseTokens(request) {
         }
 
         try{
-            await transferTokens(data[0].public_key, tokenQuantity)        
+            await transferTokens(data[0].public_key, parseInt(tokenQuantity))        
         }catch(error){
             return new Response(JSON.stringify({ updateError: 'Error  transfering tokens' }), 
             { status: 500, headers: { 'Content-Type': 'application/json' } });
@@ -127,7 +127,7 @@ async function purchaseTokens(request) {
  */
 async function transferTokens(public_key, tokenQuantity) {
     console.log("Public key: ", public_key)
-    console.log("Tokens: ")
+    console.log("Tokens: ", tokenQuantity)
     const alchemyEndpoint = Deno.env.get('ALCHEMY_URL')
     const alchemyProvider = new ethers.providers.JsonRpcProvider(alchemyEndpoint)
     const tokenContractAddress = Deno.env.get('TOKEN_CONTRACT_ADDRESS')
