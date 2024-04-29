@@ -6,9 +6,10 @@ import {
   assert,
   assertExists,
   assertEquals,
+  assertThrows
 } from 'https://deno.land/std@0.192.0/testing/asserts.ts'
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.23.0'
-//import { delay } from 'https://deno.land/x/delay@v0.2.0/mod.ts'
+import { delay } from 'https://deno.land/x/delay@v0.2.0/mod.ts'
 
 // Set up the configuration for the Supabase client
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
@@ -63,7 +64,8 @@ const testClientCreation = async () => {
     const { data: func_data, error: func_error } = await client.functions.invoke('cryptoWalletCreator', {
     body: { userId: userId }
     }); 
-    console.log(func_error)
+    
+    await new Promise(resolve => setTimeout(resolve, 10000));
 
     const {data: walletData, error: errorData} = await client
           .from('users')
@@ -74,7 +76,6 @@ const testClientCreation = async () => {
             throw new Error('Unable to retrieve publicKey: ' + errorData.message)
           }
     
-    console.log(walletData.public_key)
     assert(walletData.public_key !== null, 'Public key should not be null.');
     assert(walletData.public_key, 'Data should be returned from the query.');
     assert(walletData.private_key !== null, 'Private key should not be null.');
@@ -138,7 +139,9 @@ const testClientCreation = async () => {
     const { data: func_data, error: func_error } = await client.functions.invoke('cryptoWalletCreator', {
     body: { userId: userId }
     }); 
-    console.log(func_error)
+
+    await new Promise(resolve => setTimeout(resolve, 10000));
+    
 
     const {data: walletData, error: errorData} = await client
           .from('users')
@@ -149,7 +152,6 @@ const testClientCreation = async () => {
             throw new Error('Unable to retrieve publicKey: ' + errorData.message)
           }
     
-    console.log(walletData.public_key)
     assert(walletData.public_key !== null, 'Public key should not be null.');
     assert(walletData.public_key, 'Data should be returned from the query.');
     assert(walletData.private_key !== null, 'Private key should not be null.');
@@ -196,13 +198,33 @@ const testClientCreation = async () => {
     
   }
 
-  
+  const testWalletOnlyCreatedOnce = async() => {
+    var client = createClient(supabaseUrl, supabaseKey, options)
+    const userId = Deno.env.get('ARTIST_ID')
+    console.log("Test that a status 404 error is returned is user already has a wallet")
 
+    try {
+      const { data: func_data, error: func_error } = await client.functions.invoke('cryptoWalletCreator', {
+          body: { userId: userId }
+      });
 
+      if (func_error) {
+          if(func_error.context.body) await func_error.context.body.cancel()
+          throw new Error(func_error.context.status);        
+      }
 
+      assertEquals(func_data, "Expected Value", "The data should contain the expected value.");
+      
+    } catch (error) {
+        console.error("Status: ", error);
+        const statusCode = parseInt(error.message, 10);
+        assertEquals(statusCode, 404, "Expected error status 404 for users with an existing wallet");
+    }
+  }
 
   Deno.test("Client Creation Test", testClientCreation)
-  //Deno.test("Listener Test Wallet Creation", testListenerWalletCreation)
+  Deno.test("Listener Test Wallet Creation", testListenerWalletCreation)
   Deno.test("Test Listener Receives Bonus Tokens and .025 Matic For Gas Fees", testListenerBonusTokens )
-  //Deno.test("Artist Test Wallet Creation", testArtistWalletCreation)
+  Deno.test("Artist Test Wallet Creation", testArtistWalletCreation)
   Deno.test("Test Artist Receives No Bonus Tokens and .025 Matic For Gas Fees", testArtistBonusTokens )
+  Deno.test("Test that a wallet is only created once if a user already has one", testWalletOnlyCreatedOnce)
