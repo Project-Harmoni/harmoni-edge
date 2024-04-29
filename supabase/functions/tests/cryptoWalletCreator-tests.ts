@@ -1,4 +1,20 @@
-// Import required libraries and modules
+/**
+ * This test suite verifies the functionality related to Supabase interactions, Ethereum blockchain interactions, and 
+ * the creation and management of crypto wallets for users within a music streaming application. 
+ * Each test ensures that specific functionalities behave as expected, including proper error handling.
+ * 
+ * Required Environment Variables:
+ * - SUPABASE_URL: URL to the Supabase project used for backend operations.
+ * - SUPABASE_ANON_KEY: Anonymous key for accessing the Supabase project.
+ * - LISTENER_ID: Identifier for a listener in the database to test wallet creation and token transactions.
+ * - ARTIST_ID: Identifier for an artist in the database to test wallet creation and token management.
+ * - ALCHEMY_URL: URL for Alchemy API, used to interact with the Ethereum blockchain.
+ * - TOKEN_CONTRACT_ADDRESS: Address of the deployed token contract on Ethereum for managing tokens.
+ * 
+ * Ensure these variables are set in the .env file before running the tests.
+ */
+
+
 import "https://deno.land/x/dotenv/load.ts"
 import { ethers } from 'https://cdn.skypack.dev/ethers@5.6.8'
 
@@ -25,7 +41,7 @@ const options = {
 
 
 
-// Test the creation and functionality of the Supabase client
+// Test to ensure that the Supabase client is created and can query the database successfully
 const testClientCreation = async () => {
     const client = createClient(supabaseUrl, supabaseKey, options)
   
@@ -44,9 +60,9 @@ const testClientCreation = async () => {
     assert(table_data, 'Data should be returned from the query.')
   }
 
-  // Test that a new wallet and private key are created for a listener 
-  // At least one listener must exist in the local database and their id must be
-  // in the .env for this test environment
+  /* Tests that a new wallet is correctly created for a listener and that the keys are stored in the database
+     At least one listener must exist in the local database and their id must be
+     in the .env for this test environment */
   const testListenerWalletCreation = async () => {
 
     var client = createClient(supabaseUrl, supabaseKey, options);
@@ -83,6 +99,7 @@ const testClientCreation = async () => {
     
   }
 
+  // Tests that listeners receive the correct amount of bonus tokens and gas
   const testListenerBonusTokens = async () => {
     var client = createClient(supabaseUrl, supabaseKey, options)
     const userId = Deno.env.get('LISTENER_ID')
@@ -122,6 +139,9 @@ const testClientCreation = async () => {
     
   }
 
+  /* Tests that a new wallet is correctly created for an artist and that the keys are stored in the database
+     At least one artist must exist in the local database and their id must be
+     in the .env for this test environment */
   const testArtistWalletCreation = async () => {
 
     var client = createClient(supabaseUrl, supabaseKey, options);
@@ -159,6 +179,7 @@ const testClientCreation = async () => {
     
   }
 
+  // Tests that listeners receive no bonus tokens and the correct amount of gas 
   const testArtistBonusTokens = async () => {
     var client = createClient(supabaseUrl, supabaseKey, options)
     const userId = Deno.env.get('ARTIST_ID')
@@ -198,6 +219,7 @@ const testClientCreation = async () => {
     
   }
 
+  // Test that a wallet creation is not duplicated if a user already has one
   const testWalletOnlyCreatedOnce = async() => {
     var client = createClient(supabaseUrl, supabaseKey, options)
     const userId = Deno.env.get('ARTIST_ID')
