@@ -1,3 +1,20 @@
+/**
+ * Test Suite Description:
+ * This suite tests the integration of Supabase and Ethereum blockchain functionality
+ * in a music streaming platform, focusing on user wallet interactions and token transactions.
+ * 
+ * Required Environment Variables:
+ * - SUPABASE_URL: URL to your Supabase project for database interactions.
+ * - SUPABASE_ANON_KEY: Anonymous key for accessing the Supabase project.
+ * - ALCHEMY_URL: Endpoint URL for the Alchemy API to interact with the Ethereum blockchain.
+ * - TOKEN_CONTRACT_ADDRESS: Smart contract address on the Ethereum blockchain for token management.
+ * 
+ * Each test verifies a critical functionality:
+ * - Creating and querying from the Supabase client.
+ * - Transactional operations like purchasing tokens and updating wallet balances.
+ * - Consistency checks between on-chain and off-chain data.
+ */
+
 // Import required libraries and modules
 import "https://deno.land/x/dotenv/load.ts"
 import { ethers } from 'https://cdn.skypack.dev/ethers@5.6.8'
@@ -22,7 +39,7 @@ const options = {
   },
 }
 
-// Test the creation and functionality of the Supabase client
+// Test for verifying that the Supabase client is correctly set up and can perform basic queries.
 const testClientCreation = async () => {
     var client: SupabaseClient = createClient(supabaseUrl, supabaseKey, options)
   
@@ -41,7 +58,7 @@ const testClientCreation = async () => {
     assert(table_data, 'Data should be returned from the query.')
   }
 
-  // Test the 'purchaseTokens' function
+// Test for simulating a token purchase process for a listener, ensuring that token data is updated accordingly.
 const testListenerPurchaseTokens = async () => {
     console.log("Test listener can purchase tokens")
     var client = createClient(supabaseUrl, supabaseKey, options);
@@ -70,7 +87,6 @@ const testListenerPurchaseTokens = async () => {
         const newTokens = tokenData.tokens + 1
         
     console.log("Purchase one token")
-    // Invoke the 'hello-world' function with a parameter
     const { data: func_data, error: func_error } = await client.functions.invoke('purchaseTokens', {
       body: { userId: listenerData.listener_id, tokenQuantity: "1" }
     });
@@ -99,6 +115,7 @@ const testListenerPurchaseTokens = async () => {
     assertEquals(newTokenData.tokens, newTokens)
   }
 
+  // Test for ensuring that artists can also purchase tokens and that their balances are updated correctly.
   const testArtistPurchaseTokens = async () => {
     console.log("Test artist can purchase tokens")
     var client = createClient(supabaseUrl, supabaseKey, options);
@@ -154,8 +171,9 @@ const testListenerPurchaseTokens = async () => {
     // Assert that the function returned the expected result
     assertEquals(func_data.data, "Purchase processed");
     assertEquals(newTokenData.tokens, newTokens)
-  };
+  }
 
+  // Test to ensure that the token balances in the blockchain match the records in the database after a token transaction.
   const testDatabaseTokensMatchBlockchain = async () => {
     console.log("Test blockchain token balance matches database token balance after purchase")
     const alchemyUrl = Deno.env.get('ALCHEMY_URL')
