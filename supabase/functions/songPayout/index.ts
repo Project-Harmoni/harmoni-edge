@@ -240,6 +240,22 @@ async function processListenersData(supabase, songId, data, artistData, songData
     
         for(let i=0; i < data.length; i++){
             const listener = data[i].listener_id
+            const {data: userData, error: userError} = await supabase
+                .from('users')
+                .select('user_type')
+                .eq('user_id', listener)
+                .single()
+                if (userError){
+                    console.error('Operational error:', userError)
+                }
+                
+            if (userData.user_type.toLowerCase() === 'artist'){
+                table = 'artists'
+                id = 'artist_id'
+            }else{
+                table = 'listeners'
+                id = 'listener_id'
+            }
             // create receiver wallet
             const receiverWallet = data[i].listener.public_key
             
@@ -252,7 +268,6 @@ async function processListenersData(supabase, songId, data, artistData, songData
                 console.log('Transfer successful', transaction);
             } catch (transferError) {
                 console.error('Transfer error:', transferError);
-                return;  // Stop execution and handle the error appropriately
             }
             //set count_stream to 0
             const { data: streamData, error: countError } = await supabase
@@ -266,9 +281,9 @@ async function processListenersData(supabase, songId, data, artistData, songData
             console.log(`Successfully reset counter_streams: ${listener}`);
             // get current balance of listener tokens
             let {data: listenerData, error: listenerError} = await supabase
-            .from('listeners')
+            .from(table)
             .select('tokens')
-            .eq('listener_id', listener)
+            .eq(id, listener)
             .single()
             if (listenerError) {
                 console.error('Operational error:', error);
@@ -277,9 +292,9 @@ async function processListenersData(supabase, songId, data, artistData, songData
             const newTokens = listenerData.tokens + tokenAmount
             // update with new amount
             const {error: updateError} = await supabase
-            .from('listeners')
+            .from(table)
             .update({tokens: newTokens})
-            .eq('listener_id', listener)
+            .eq(id, listener)
             if (updateError) {
                 console.error('Error updating tokens:', updateError);
                 //throw new Error('Error updating tokens after subtraction');
