@@ -149,6 +149,8 @@ async function processListenersData(supabase, songId, data, artistData, songData
     const privateKey = artistData[0].artist.users.private_key
     const transferWallet = new ethers.Wallet(privateKey, alchemyProvider)
     const contractWithSigner = tokenContract.connect(transferWallet)
+    var table
+    var id
 
     if (artistData[0].payout_type.toLowerCase() === 'jackpot'){
         console.log("This is a jackpot")
@@ -176,22 +178,39 @@ async function processListenersData(supabase, songId, data, artistData, songData
         if (countError) {
             console.error('Error resetting counter_streams:', countError);
         }
+        const {data: userData, error: userError} = await supabase
+        .from('users')
+        .select('user_type')
+        .eq('user_id', jackpotWinner)
+        .single()
+        if (userError){
+            console.error('Operational error:', userError)
+        }
+        
+        if (userData.user_type.toLowerCase() === 'artist'){
+            table = 'artists'
+            id = 'artist_id'
+        }else{
+            table = 'listeners'
+            id = 'listener_id'
+        }
+
             // get current balance of listener tokens
             let {data: listenerData, error: listenerError} = await supabase
-            .from('listeners')
+            .from(table)
             .select('tokens')
-            .eq('listener_id', jackpotWinner)
+            .eq(id, jackpotWinner)
             .single()
             if (listenerError) {
-                console.error('Operational error:', error);
+                console.error('Operational error:', listenerError);
                 //throw new Error('Error subtracting tokens due to operational issue');
             }   
             const newTokens = listenerData.tokens + jackpot
             // update with new amount
             const {error: updateError} = await supabase
-            .from('listeners')
+            .from(table)
             .update({tokens: newTokens})
-            .eq('listener_id', jackpotWinner)
+            .eq(id, jackpotWinner)
             if (updateError) {
                 console.error('Error updating tokens:', updateError);
                 //throw new Error('Error updating tokens after subtraction');
@@ -273,7 +292,7 @@ async function processListenersData(supabase, songId, data, artistData, songData
             .eq('artist_id', artistData[0].artist_id)
             .single()
             if (artistError) {
-                console.error('Operational error:', error);
+                console.error('Operational error:', artistError);
                 //throw new Error('Error subtracting tokens due to operational issue');
             }   
             const artistTokens = artistsData.tokens - tokenAmount
